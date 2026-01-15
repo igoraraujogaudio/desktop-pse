@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  
+  <link rel="shortcut icon" href="../img/favicon.ico">
+  <title>Referência C++ - iDBio</title>
+  <link href='https://fonts.googleapis.com/css?family=Lato:400,700|Roboto+Slab:400,700|Inconsolata:400,700' rel='stylesheet' type='text/css'>
+
+  <link rel="stylesheet" href="../css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../css/theme_extra.css" type="text/css" />
+  <link rel="stylesheet" href="../css/highlight.css">
+  <link href="../stylesheets/extra.css" rel="stylesheet">
+  
+  <script>
+    // Current page data
+    var mkdocs_page_name = "Refer\u00eancia C++";
+    var mkdocs_page_input_path = "3_cpp_reference.md";
+    var mkdocs_page_url = "/3_cpp_reference/";
+  </script>
+  
+  <script src="../js/jquery-2.1.1.min.js"></script>
+  <script src="../js/modernizr-2.8.3.min.js"></script>
+  <script type="text/javascript" src="../js/highlight.pack.js"></script> 
+  
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+      <div class="wy-side-nav-search">
+        <a href=".."> iDBio</a>
+        <div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Buscar" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+	<ul class="current">
+	  
+          
+            <li class="toctree-l1">
+		
+    <a class="" href="..">Principal</a>
+	    </li>
+          
+            <li class="toctree-l1">
+		
+    <a class="" href="../1_sdk/">SDK</a>
+	    </li>
+          
+            <li class="toctree-l1">
+		
+    <a class="" href="../2_c_reference/">Referência C</a>
+	    </li>
+          
+            <li class="toctree-l1 current">
+		
+    <a class="current" href="./">Referência C++</a>
+    <ul class="subnav">
+            
+    <li class="toctree-l2"><a href="#introducao">Introdução</a></li>
+    
+
+    <li class="toctree-l2"><a href="#codigos-de-retorno">Códigos de Retorno</a></li>
+    
+
+    <li class="toctree-l2"><a href="#inicializacao-e-finalizacao">Inicialização e Finalização</a></li>
+    
+
+    <li class="toctree-l2"><a href="#captura-de-dedo">Captura de dedo</a></li>
+    
+
+    <li class="toctree-l2"><a href="#gerenciar-templates">Gerenciar Templates</a></li>
+    
+
+    <li class="toctree-l2"><a href="#configuracao-do-dispositivo">Configuração do dispositivo</a></li>
+    
+
+    <li class="toctree-l2"><a href="#desalocacao-de-memoria">Desalocação de memória</a></li>
+    
+
+    </ul>
+	    </li>
+          
+            <li class="toctree-l1">
+		
+    <a class="" href="../4_csharp_reference/">Referência C#</a>
+	    </li>
+          
+        </ul>
+      </div>
+      &nbsp;
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="..">iDBio</a>
+      </nav>
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="..">Docs</a> &raquo;</li>
+    
+      
+    
+    <li>Referência C++</li>
+    <li class="wy-breadcrumbs-aside">
+      
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main">
+            <div class="section">
+              
+                <h2 id="introducao">Introdução</h2>
+<p>O Wrapper C++ pode ser encontrada no <a href="https://www.controlid.com.br/idbio/IDBIO_SDK.zip">Kit de desenvolvimento do iDBIO</a>. O wrapper é composto apenas de um header que se encontra na pasta "include".</p>
+<p>Todos os métodos apresentados abaixo pertencem à classe <strong><em>iDBio</em></strong>.</p>
+<h2 id="codigos-de-retorno">Códigos de Retorno</h2>
+<p><strong>static int32_t <em>GetErrorMessage</em> (const int32_t error, std::string&amp; msg)</strong></p>
+<p>Retorna mensagem em inglês do erro passado.</p>
+<p><em>Parâmetros de entrada:</em> </p>
+<ul>
+<li>error: <em>int32_t</em><br />
+   Código de erro.</li>
+</ul>
+<p><em>Parâmetros de saída:</em> </p>
+<ul>
+<li>msg: <em>std::string&amp;</em><br />
+   Descrição em inglês do erro.  </li>
+</ul>
+<p>Todas as funções desta biblioteca retornam um número inteiro. Este código de retorno pode indicar uma das 3 situações abaixo: </p>
+<ul>
+<li>Sucesso (== 0) - Operação foi realizada com sucesso </li>
+<li>Aviso (&gt; 0) - Operação foi realizada mas com alguma ressalva</li>
+<li>Erro (&lt; 0) - Operação falhou</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>Valor</th>
+<th>Define</th>
+<th>Descrição</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td>CIDBIO_SUCCESS</td>
+<td>Operação realizada com sucesso</td>
+</tr>
+<tr>
+<td>1</td>
+<td>CIDBIO_WARNING_ALREADY_INIT</td>
+<td>Biblioteca já inicializada</td>
+</tr>
+<tr>
+<td>2</td>
+<td>CIDBIO_WARNING_NO_IDS_ON_DEVICE</td>
+<td>Nenhum Template cadastrado</td>
+</tr>
+<tr>
+<td>3</td>
+<td>CIDBIO_WARNING_OVERWRITING_TEMPLATE</td>
+<td>Template foi sobrescrito</td>
+</tr>
+<tr>
+<td>-1</td>
+<td>CIDBIO_ERROR_UNKNOWN</td>
+<td>Erro desconhecido</td>
+</tr>
+<tr>
+<td>-2</td>
+<td>CIDBIO_ERROR_NO_DEVICE</td>
+<td>Dispositivo não encontrado</td>
+</tr>
+<tr>
+<td>-3</td>
+<td>CIDBIO_ERROR_NULL_ARGUMENT</td>
+<td>Argumento nulo</td>
+</tr>
+<tr>
+<td>-4</td>
+<td>CIDBIO_ERROR_INVALID_ARGUMENT</td>
+<td>Argumento inválido</td>
+</tr>
+<tr>
+<td>-5</td>
+<td>CIDBIO_ERROR_CAPTURE</td>
+<td>Erro durante a captura</td>
+</tr>
+<tr>
+<td>-6</td>
+<td>CIDBIO_ERROR_CAPTURE_TIMEOUT</td>
+<td>Tempo de captura expirado</td>
+</tr>
+<tr>
+<td>-7</td>
+<td>CIDBIO_ERROR_COMM_USB</td>
+<td>Erro de comunicação USB</td>
+</tr>
+<tr>
+<td>-8</td>
+<td>CIDBIO_ERROR_IO_ON_HOST</td>
+<td>Erro de comunicação do Host</td>
+</tr>
+<tr>
+<td>-9</td>
+<td>CIDBIO_ERROR_TEMPLATE_ALREADY_ENROLLED</td>
+<td>Template já cadastrado</td>
+</tr>
+<tr>
+<td>-10</td>
+<td>CIDBIO_ERROR_MERGING</td>
+<td>Falha no Merge</td>
+</tr>
+<tr>
+<td>-11</td>
+<td>CIDBIO_ERROR_MATCHING</td>
+<td>Falha no Match</td>
+</tr>
+<tr>
+<td>-12</td>
+<td>CIDBIO_ERROR_INVALID_FW_FILE</td>
+<td>Arquivo de Firmware inválido</td>
+</tr>
+<tr>
+<td>-13</td>
+<td>CIDBIO_ERROR_NO_SPACE_LEFT_ON_DEVICE</td>
+<td>Espaço no dispositivo esgotado</td>
+</tr>
+<tr>
+<td>-14</td>
+<td>CIDBIO_ERROR_NO_TEMPLATE_WITH_ID</td>
+<td>Template não cadastrado</td>
+</tr>
+<tr>
+<td>-15</td>
+<td>CIDBIO_ERROR_INVALID_ERRNO</td>
+<td>Código de erro inválido</td>
+</tr>
+<tr>
+<td>-16</td>
+<td>CIDBIO_ERROR_UNAVAILABLE_FEATURE</td>
+<td>Funcionalidade não disponível</td>
+</tr>
+<tr>
+<td>-17</td>
+<td>CIDBIO_ERROR_PREVIOUS_FW_VERSION</td>
+<td>Versão do firmware é anterior à atual</td>
+</tr>
+<tr>
+<td>-18</td>
+<td>CIDBIO_ERROR_NOT_IDENTIFIED</td>
+<td>Template não identificado</td>
+</tr>
+<tr>
+<td>-19</td>
+<td>CIDBIO_ERROR_BUSY</td>
+<td>Dispositivo esta ocupado</td>
+</tr>
+<tr>
+<td>-20</td>
+<td>CIDBIO_ERROR_CAPTURE_CANCELED</td>
+<td>Captura foi cancelada</td>
+</tr>
+<tr>
+<td>-21</td>
+<td>CIDBIO_ERROR_NO_FINGER_DETECTED</td>
+<td>Digital não foi detectada</td>
+</tr>
+</tbody>
+</table>
+<h2 id="inicializacao-e-finalizacao">Inicialização e Finalização</h2>
+<p><strong>static int32_t <em>SetSerialCommPort</em> (const std::string&amp; comPort)</strong></p>
+<p>Configura em qual porta o dispositivo deve se conectar.<br />
+Disponível a partir da versão da SDK: <em>1.4.0</em></p>
+<p><em>Parâmetro de entrada:</em>  </p>
+<ul>
+<li>comPort: <em>const std::string&amp;</em><br />
+   Porta serial ao qual o dispositivo deve se conectar. Deve ser "COMx" em Windows e "/dev/ttyACMx" em Linux</li>
+</ul>
+<p><strong>static int32_t <em>Init</em> (void)</strong></p>
+<p>Checa e inicializa o dispositivo.</p>
+<p><strong>static int32_t <em>Terminate</em> (void)</strong></p>
+<p>Finaliza o dispositivo.</p>
+<h2 id="captura-de-dedo">Captura de dedo</h2>
+<p><strong>int32_t <em>CaptureImage</em> (std::vector&lt;byte>&amp; imageBuf, uint32_t&amp; width, uint32_t&amp; height)</strong></p>
+<p>Captura uma imagem de um dedo. Quando esta função é chamada o dispositivo entra no modo de captura de imagens. Esta função não retorna enquanto um dedo não for capturado, ou o tempo de captura for expirado (30 segundos). </p>
+<p><em>Parâmetros de saída:</em>  </p>
+<ul>
+<li>imageBuf: <em>std::vector&lt;byte>&amp;</em><br />
+   Buffer com o conteúdo bitmap da imagem.  </li>
+<li>width: <em>uint32_t&amp;</em><br />
+   Largura da imagem</li>
+<li>height: <em>uint32_t&amp;</em><br />
+   Altura da imagem</li>
+</ul>
+<p><strong>int32_t <em>CheckFingerprint</em> (std::vector&lt;byte>&amp; imageBuf, uint32_t&amp; width, uint32_t&amp; height)</strong></p>
+<p>Checa se existe um dedo pressionando o leitor. Em caso positivo a imagem da digital é retornada, em caso negativo o erro <strong>CIDBIO_ERROR_NO_FINGER_DETECTED</strong> é retornado. Esta função sempre retorna imediatamente.<br />
+Disponível a partir da versão do firmware: <em>1.2.0</em></p>
+<p><em>Parâmetros de saída:</em>  </p>
+<ul>
+<li>imageBuf: <em>std::vector&lt;byte>&amp;</em><br />
+   Buffer com o conteúdo bitmap da imagem.  </li>
+<li>width: <em>uint32_t&amp;</em><br />
+   Largura da imagem</li>
+<li>height: <em>uint32_t&amp;</em><br />
+   Altura da imagem</li>
+</ul>
+<p><strong>int32_t <em>CaptureImageAndTemplate</em> (std::string&amp; temp, std::vector&lt;byte>&amp; imageBuf, uint32_t&amp; width, uint32_t&amp; height, int32_t&amp; quality)</strong></p>
+<p>Captura uma imagem de um dedo e extrai o seu template. Quando esta função é chamada o dispositivo entra no modo de captura de imagens. Esta função não retorna enquanto um dedo não for capturado, ou o tempo de captura for expirado (30 segundos). </p>
+<p><em>Parâmetros de saída:</em>  </p>
+<ul>
+<li>temp: <em>std::string&amp;</em><br />
+   Base64 do template extraído.  </li>
+<li>imageBuf: <em>std::vector&lt;byte>&amp;</em><br />
+   Buffer com o conteúdo bitmap da imagem.  </li>
+<li>width: <em>uint32_t&amp;</em><br />
+   Largura da imagem</li>
+<li>height: <em>uint32_t&amp;</em><br />
+   Altura da imagem.</li>
+<li>quality: <em>int32_t&amp;</em><br />
+   Valor de 0 a 100 que define a qualidade da imagem do dedo capturado.</li>
+</ul>
+<p><strong>int32_t <em>CaptureAndEnroll</em> (int64_t id)</strong></p>
+<p>Captura 3 imagens de um dedo e o cadastra no dispositivo. Quando esta função é chamada o dispositivo entra no modo de captura de imagens. Esta função não retorna enquanto um dedo não for capturado 3 vezes, ou o tempo de captura for expirado (30 segundos por iteração). </p>
+<p><em>Parâmetro de entrada:</em>  </p>
+<ul>
+<li>id: <em>int64_t</em><br />
+   Número identificador do template</li>
+</ul>
+<p><strong>int32_t <em>CaptureAndIdentify</em> (int64_t&amp; id, int32_t&amp; score, int32_t&amp; quality)</strong></p>
+<p>Captura uma imagem de um dedo e tenta encontrar uma biometria semelhante cadastrada no dispositivo. Quando esta função é chamada o dispositivo entra no modo de captura de imagens. Esta função não retorna enquanto um dedo não for capturado, ou o tempo de captura for expirado (30 segundos). </p>
+<p><em>Parâmetros de saída:</em>  </p>
+<ul>
+<li>id: <em>int64_t&amp;</em><br />
+   Número identificador do template encontrado.</li>
+<li>score: <em>int32_t&amp;</em><br />
+   Valor entre 0 e 20000 que define a semelhança entre o dedo capturado e o cadastrado.</li>
+<li>quality: <em>int32_t&amp;</em><br />
+   Valor de 0 a 100 que define a qualidade da imagem do dedo capturado.</li>
+</ul>
+<p><strong>int32_t <em>CaptureAndMatch</em> (int64_t id, int32_t&amp; score, int32_t&amp; quality)</strong></p>
+<p>Captura uma imagem de um dedo e verifica a semelhança com a biometria cadastrada com identificador <em>id</em>. Quando esta função é chamada o dispositivo entra no modo de captura de imagens. Esta função não retorna enquanto um dedo não for capturado, ou o tempo de captura for expirado (30 segundos). </p>
+<p><em>Parâmetros de entrada:</em>  </p>
+<ul>
+<li>id: <em>int64_t</em><br />
+   Número identificador do template a ser comparado.</li>
+</ul>
+<p><em>Parâmetros de saída:</em>  </p>
+<ul>
+<li>score: <em>int32_t&amp;</em><br />
+   Valor entre 0 e 20000 que define a semelhança entre o dedo capturado e o cadastrado.</li>
+<li>quality: <em>int32_t&amp;</em><br />
+   Valor de 0 a 100 que define a qualidade da imagem do dedo capturado.</li>
+</ul>
+<p><strong>int32_t <em>CancelCapture</em> ()</strong></p>
+<p>Cancela a operação de captura atual.<br />
+Disponível a partir da versão do firmware: <em>1.2.0</em></p>
+<h2 id="gerenciar-templates">Gerenciar Templates</h2>
+<p><strong>int32_t <em>ExtractTemplateFromImage</em> (uint32_t width, uint32_t height, const std::vector&lt;byte>&amp; imageBuf, std::string&amp; temp, int32_t&amp; quality)</strong></p>
+<p>Extrai o template de uma imagem.</p>
+<p><em>Parâmetros de entrada:</em>  </p>
+<ul>
+<li>width: <em>uint32_t</em><br />
+   Largura da imagem</li>
+<li>height: uint32_t<br />
+   Altura da imagem.</li>
+<li>imageBuf: <em>const std::vector&lt;byte>&amp;</em><br />
+   Buffer com o conteúdo bitmap da imagem.  </li>
+</ul>
+<p><em>Parâmetros de saída:</em>  </p>
+<ul>
+<li>temp: <em>std::string&amp;</em><br />
+   Base64 do template extraído.  </li>
+<li>quality: <em>int32_t&amp;</em><br />
+   Valor de 0 a 100 que define a qualidade da imagem do dedo capturado.</li>
+</ul>
+<p><strong>int32_t <em>MergeTemplates</em> (const std::string&amp; temp1, const std::string&amp; temp2, const std::string&amp; temp3, std::string&amp; tempFinal)</strong></p>
+<p>Mescla 3 templates em um único template. Templates devem pertencer ao mesmo dedo. (Formatos "ISO" e "ANSI" não são suportados para importação de templates)</p>
+<p><em>Parâmetros de entrada:</em>  </p>
+<ul>
+<li>temp1: <em>const std::string&amp;</em><br />
+   Base64 do primeiro template.  </li>
+<li>temp2: <em>const std::string&amp;</em><br />
+   Base64 do segundo template.</li>
+<li>temp3: <em>const std::string&amp;</em><br />
+   Base64 do terceiro template.</li>
+</ul>
+<p><em>Parâmetros de saída:</em>  </p>
+<ul>
+<li>tempFinal: <em>std::string&amp;</em>
+   Base64 do template mesclado.  </li>
+</ul>
+<p><strong>int32_t <em>MatchTemplates</em> (const std::string&amp; temp1, const std::string&amp; temp2, int32_t&amp; score)</strong></p>
+<p>Verifica se 2 templates são iguais. (Formatos "ISO" e "ANSI" não são suportados para importação de templates)</p>
+<p><em>Parâmetros de entrada:</em>  </p>
+<ul>
+<li>temp1: <em>const std::string&amp;</em><br />
+   Base64 do primeiro template.  </li>
+<li>temp2: <em>const std::string&amp;</em><br />
+   Base64 do segundo template.</li>
+</ul>
+<p><em>Parâmetros de saída:</em>  </p>
+<ul>
+<li>score: <em>int32_t&amp;</em><br />
+   Valor entre 0 e 20000 que define a semelhança entre os 2 templates.</li>
+</ul>
+<p><strong>int32_t <em>MatchTemplateByID</em> (int64_t id, const std::string&amp; temp, int32_t&amp; score)</strong></p>
+<p>Verifica se o template <em>temp</em> é igual ao template cadastrado com identificador <em>id</em>. (Formatos "ISO" e "ANSI" não são suportados para importação de templates)</p>
+<p><em>Parâmetros de entrada:</em>  </p>
+<ul>
+<li>id: <em>int64_t</em><br />
+   identificador do template a ser verificado.</li>
+<li>temp: <em>const std::string&amp;</em><br />
+   Base64 do template.</li>
+</ul>
+<p><em>Parâmetros de saída:</em>  </p>
+<ul>
+<li>score: <em>int32_t&amp;</em><br />
+   Valor entre 0 e 20000 que define a semelhança entre os 2 templates.</li>
+</ul>
+<p><strong>int32_t <em>GetTemplateIDs</em> (std::vector&lt;int64_t>&amp; ids)</strong></p>
+<p>Carrega os identificadores de todos templates cadastrados.</p>
+<p><em>Parâmetros de saída:</em>  </p>
+<ul>
+<li>ids: <em>std::vector&lt;int64_t>&amp;</em><br />
+   Identificadores de todos os templates cadastros no dispositivo.</li>
+</ul>
+<p><strong>int32_t <em>GetTemplate</em> (int64_t id, std::string&amp; temp)</strong></p>
+<p>Carrega o template cadastrado com identificador <em>id</em>.</p>
+<p><em>Parâmetros de entrada:</em></p>
+<ul>
+<li>id: <em>int64_t</em><br />
+   Identificador do templates cadastro no dispositivo.</li>
+</ul>
+<p><em>Parâmetros de saída:</em>  </p>
+<ul>
+<li>temp: <em>std::string&amp;</em><br />
+   Base64 do template.  </li>
+</ul>
+<p><strong>int32_t <em>SaveTemplate</em> (int64_t id, const std::string&amp; temp)</strong></p>
+<p>Salva o template <em>temp</em> com o identificador <em>id</em>. (Formatos "ISO" e "ANSI" não são suportados para importação de templates)</p>
+<p><em>Parâmetros de entrada:</em></p>
+<ul>
+<li>
+<p>id: <em>int64_t</em><br />
+   Identificador do templates cadastro no dispositivo.</p>
+</li>
+<li>
+<p>temp: <em>const std::string&amp;</em><br />
+   Base64 do template.</p>
+</li>
+</ul>
+<p><strong>int32_t <em>DeleteTemplate</em> (int64_t id)</strong></p>
+<p>Deleta o template cadastrado com identificador <em>id</em>.</p>
+<p><em>Parâmetros de entrada:</em></p>
+<ul>
+<li>id: <em>int64_t</em><br />
+   Identificador do templates cadastro no dispositivo.</li>
+</ul>
+<p><strong>int32_t <em>DeleteAllTemplates</em> (void)</strong></p>
+<p>Deleta todos os template cadastrados no dispositivo.</p>
+<h2 id="configuracao-do-dispositivo">Configuração do dispositivo</h2>
+<p>É possível alterar o comportamento do dispositivo atráves das configurações abaixo:</p>
+<table>
+<thead>
+<tr>
+<th>Valor</th>
+<th>Define</th>
+<th>Descrição</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>CIDBIO_PARAM_MIN_VAR</td>
+<td>Variância mínima para captura de um dedo. (padrão: "1000")</td>
+</tr>
+<tr>
+<td>2</td>
+<td>CIDBIO_PARAM_SIMILIARITY_THRESHOLD</td>
+<td>Valor de 1 a 20000 que determina o valor mínimo para 2 templates serem considerados iguais. Valor 0 para automático (padrão)</td>
+</tr>
+<tr>
+<td>4</td>
+<td>CIDBIO_PARAM_BUZZER_ON</td>
+<td>"1" (padrão) ou "0" para ligar ou desligar o buzzer</td>
+</tr>
+<tr>
+<td>5</td>
+<td>CIDBIO_PARAM_TEMPLATE_FORMAT</td>
+<td>Configura o formato do template. Valores possíveis:<br>"<strong>ICS</strong>": Formato proprietário (padrão) <br>"<strong>ANSI</strong>": Formato ANSI  (Somente para exportação de templates)<br>"<strong>ISO</strong>": Formato ISO  (Somente para exportação de templates)<br>"<strong>ANSI_PLUS</strong>": Formato ANSI com informações proprietárias <br>"<strong>ISO_PLUS</strong>": Formato ISO com informações proprietárias</td>
+</tr>
+<tr>
+<td>6</td>
+<td>CIDBIO_PARAM_ROTATION</td>
+<td>Rotação máxima aceita para que dois dedos sejam aceitos como iguais. Esta rotação é aplicada no sentido horário e anti-horário. Este parâmetro impacta na velocidade de identificação, quanto maior este valor, mais tempo a identificação demorará. Valor de 0 a 180 (padrão: "30")</td>
+</tr>
+<tr>
+<td>7</td>
+<td>CIDBIO_PARAM_DETECT_TIMEOUT</td>
+<td>Tempo, em milissegundos, de espera para detecção de um dedo. (padrão: "30000")</td>
+</tr>
+</tbody>
+</table>
+<p><strong>int32_t <em>SetParameter</em> (int32_t config, const std::string&amp; value)</strong></p>
+<p>Configura o parâmetro <em>config</em> com o valor <em>value</em>.</p>
+<p><em>Parâmetros de entrada:</em></p>
+<ul>
+<li>config: <em>int32_t</em><br />
+   Parâmetro a ser configurado</li>
+<li>value: <em>const std::string&amp;</em><br />
+   Valor a ser configurado.</li>
+</ul>
+<p><strong>int32_t <em>GetParameter</em> (int32_t config, std::string&amp; value)</strong></p>
+<p>Lê o valor do parâmetro <em>config</em>.</p>
+<p><em>Parâmetros de entrada:</em></p>
+<ul>
+<li>config: <em>int32_t</em><br />
+   Parâmetro a ser configurado</li>
+</ul>
+<p><em>Parâmetros de saída:</em></p>
+<ul>
+<li>value: <em>std::string&amp;</em> <br />
+   Valor atual do parâmetro.  </li>
+</ul>
+<p><strong>int32_t <em>GetDeviceInfo</em> (std::string&amp; version, std::string&amp; serialNumber, std::string&amp; model)</strong></p>
+<p>Lê as informações do dispositivo.</p>
+<p><em>Parâmetros de saída:</em></p>
+<ul>
+<li>version: <em>std::string&amp;</em><br />
+   Versão do firmware do dispositivo.  </li>
+<li>serialNumber: <em>std::string&amp;</em><br />
+   Número de série do dispositivo.  </li>
+<li>model: <em>std::string&amp;</em><br />
+   Modelo do dispositivo.  </li>
+</ul>
+<p><strong>int32_t <em>UpdateFirmware</em> (const std::string&amp; filePath)</strong></p>
+<p>Atualiza o firmware do dispositivo com o arquivo em <em>filePath</em>. Este procedimento pode demorar alguns minutos. Por favor, não desconecte o dispositivo durante este período, pois isto pode danificar o dispositivo de forma permanente.<br />
+A última versão do fimware pode ser encontrada <a href="https://www.controlid.com.br/idbio/IDBIO.zip">aqui</a>.</p>
+<p><em>Parâmetros de entrada:</em></p>
+<ul>
+<li>filePath: <em>const std::string&amp;</em> <br />
+   Caminho completo para o arquivo contendo a atualização de firmware.</li>
+</ul>
+<h2 id="desalocacao-de-memoria">Desalocação de memória</h2>
+<p><strong>static int32_t <em>FreeByteArray</em> (byte* array)</strong></p>
+<p>Desaloca memória de um array de bytes.</p>
+<p><em>Parâmetros de entrada:</em></p>
+<ul>
+<li>array: <em>byte*</em> <br />
+   Array de bytes a ser desalocado da memória.</li>
+</ul>
+<p><strong>static int32_t <em>FreeString</em> (char* str)</strong></p>
+<p>Desaloca memória de uma string de c.</p>
+<p><em>Parâmetros de entrada:</em></p>
+<ul>
+<li>str: <em>char*</em> <br />
+   String a ser desalocado da memória.</li>
+</ul>
+<p><strong>static int32_t <em>FreeIDArray</em> (int64_t* ids)</strong></p>
+<p>Desaloca memória de um array de inteiros de 64 bits.</p>
+<p><em>Parâmetros de entrada:</em></p>
+<ul>
+<li>ids: <em>int64_t*</em> <br />
+   Array de inteiros de 64 bits a ser desalocado da memória.</li>
+</ul>
+              
+            </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="../4_csharp_reference/" class="btn btn-neutral float-right" title="Referência C#">Proximo <span class="icon icon-circle-arrow-right"></span></a>
+      
+      
+        <a href="../2_c_reference/" class="btn btn-neutral" title="Referência C"><span class="icon icon-circle-arrow-left"></span> Anterior</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+    
+      <p>Copyright Control iD 2018</p>
+    
+  </div>
+
+</footer>
+	  
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" style="cursor: pointer">
+    <span class="rst-current-version" data-toggle="rst-current-version">
+      
+      
+        <span><a href="../2_c_reference/" style="color: #fcfcfc;">&laquo; Anterior</a></span>
+      
+      
+        <span style="margin-left: 15px"><a href="../4_csharp_reference/" style="color: #fcfcfc">Proximo &raquo;</a></span>
+      
+    </span>
+</div>
+    <script src="../js/theme.js"></script>
+      <script src="../search/require.js"></script>
+      <script src="../search/search.js"></script>
+
+</body>
+</html>

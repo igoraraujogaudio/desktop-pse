@@ -1,0 +1,76 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Almoxarifado Desktop",
+  "version": "1.0.1",
+  "identifier": "com.pse.almoxarifado.desktop",
+  "plugins": {
+    "updater": {
+      "endpoints": [
+        "https://github.com/igoraraujogaudio/desktop-pse/releases/latest/download/latest.json"
+      ],
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEUwNDlFQzQwMzQ0MUYzQzQKUldURTgwRTBRT3hKNEhPU1RKRWJlOXNoNmJxREQvdmpMVS9vamg3Ky9LOFdlRTN2WGc4TXk5cnUK"
+    }
+  },
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build",
+    "devUrl": "http://localhost:1420",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "Almoxarifado - Almoxarife",
+        "width": 1400,
+        "height": 900,
+        "resizable": true,
+        "fullscreen": true,
+        "minimizable": true,
+        "maximizable": true,
+        "visible": true,
+        "skipTaskbar": false
+      },
+      {
+        "label": "employee",
+        "title": "Almoxarifado - Funcionário",
+        "width": 1200,
+        "height": 800,
+        "resizable": true,
+        "fullscreen": false,
+        "minimizable": true,
+        "maximizable": true,
+        "visible": false,
+        "skipTaskbar": false
+      }
+    ],
+    "security": {
+      "csp": null
+    },
+    "withGlobalTauri": false
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "resources": [
+      "resources/idbio-driver-setup.exe",
+      "resources/controlidbio.inf",
+      "resources/controlidbio.cat",
+      "resources/controlidProxUSB.inf",
+      "resources/controlididproxusb.cat",
+      "../IDBIO_SDK/lib/C_C++/win64/libcidbio.dll"
+    ],
+    "windows": {
+      "certificateThumbprint": null,
+      "digestAlgorithm": "sha256",
+      "timestampUrl": "",
+      "wix": {
+        "bannerPath": null,
+        "fipsCompliant": false,
+        "language": "pt-BR",
+        "template": null,
+        "upgradeCode": "B2C3D4E5-F6A7-8B9C-0D1E-2F3A4B5C6D7E"
+      }
+    }
+  }
+}

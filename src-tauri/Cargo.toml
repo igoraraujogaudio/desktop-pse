@@ -1,0 +1,31 @@
+[package]
+name = "almoxarifado-desktop"
+version = "1.0.0"
+description = "Aplicativo Desktop para Entrega de Almoxarifado - PSE"
+authors = ["PSE"]
+license = ""
+repository = ""
+edition = "2021"
+
+[build-dependencies]
+tauri-build = { version = "2.0", features = [] }
+
+[dependencies]
+tauri = { version = "2.0", features = [] }
+tauri-plugin-shell = "2.0"
+tauri-plugin-updater = "2.0"
+tauri-plugin-process = "2.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+log = "0.4"
+env_logger = "0.11"
+reqwest = { version = "0.12", features = ["json", "blocking"] }
+dotenv = "0.15"
+
+[target.'cfg(windows)'.dependencies]
+winreg = "0.52"
+
+[features]
+custom-protocol = ["tauri/custom-protocol"]
+biometric = []  # Feature flag para habilitar funcionalidade biométrica
+default = ["custom-protocol", "biometric"]

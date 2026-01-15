@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+
+    
+    <url>
+     <loc>/</loc>
+     <lastmod>2020-05-29</lastmod>
+     <changefreq>daily</changefreq>
+    </url>
+    
+
+    
+    <url>
+     <loc>/1_sdk/</loc>
+     <lastmod>2020-05-29</lastmod>
+     <changefreq>daily</changefreq>
+    </url>
+    
+
+    
+    <url>
+     <loc>/2_c_reference/</loc>
+     <lastmod>2020-05-29</lastmod>
+     <changefreq>daily</changefreq>
+    </url>
+    
+
+    
+    <url>
+     <loc>/3_cpp_reference/</loc>
+     <lastmod>2020-05-29</lastmod>
+     <changefreq>daily</changefreq>
+    </url>
+    
+
+    
+    <url>
+     <loc>/4_csharp_reference/</loc>
+     <lastmod>2020-05-29</lastmod>
+     <changefreq>daily</changefreq>
+    </url>
+    
+
+</urlset>
