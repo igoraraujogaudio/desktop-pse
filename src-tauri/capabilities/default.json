@@ -11,6 +11,10 @@
         "core:event:allow-emit",
         "shell:default",
         "updater:default",
-        "process:default"
+        "process:default",
+        "core:window:default",
+        "core:window:allow-get-all",
+        "core:window:allow-show",
+        "core:window:allow-set-focus"
     ]
 }

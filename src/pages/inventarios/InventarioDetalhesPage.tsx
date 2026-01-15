@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { estoqueService } from '../../services/estoqueService';
 import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
 import { emitTo } from '@tauri-apps/api/event';
-import { ChevronLeft, Eye, Package, Calendar, Tag } from 'lucide-react';
+import { ChevronLeft, Eye, Package, Calendar, Tag, Image as ImageIcon, X } from 'lucide-react';
 import { InventarioFuncionario } from '../../types/almoxarifado';
 
 interface InventarioDetalhesPageProps {
@@ -15,6 +15,7 @@ export default function InventarioDetalhesPage({ funcionarioId, funcionarioNome,
     const [loading, setLoading] = useState(true);
     const [inventario, setInventario] = useState<InventarioFuncionario[]>([]);
     const [sendingToSecondScreen, setSendingToSecondScreen] = useState(false);
+    const [selectedEvidence, setSelectedEvidence] = useState<string | null>(null);
 
     useEffect(() => {
         loadInventario();
@@ -148,14 +149,23 @@ export default function InventarioDetalhesPage({ funcionarioId, funcionarioNome,
                                                 )}
                                             </div>
                                         </div>
-                                        <div className="text-right">
+                                        <div className="text-right flex flex-col items-end gap-2">
                                             <p className="text-sm font-medium text-gray-900">
                                                 Qtd: {item.quantidade}
                                             </p>
                                             {item.item_estoque?.codigo && (
-                                                <p className="text-xs text-gray-500 mt-1">
+                                                <p className="text-xs text-gray-500">
                                                     Cód: {item.item_estoque.codigo}
                                                 </p>
+                                            )}
+                                            {item.evidencia_url && (
+                                                <button
+                                                    onClick={() => setSelectedEvidence(item.evidencia_url!)}
+                                                    className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700 font-medium transition-colors"
+                                                >
+                                                    <ImageIcon className="h-3.5 w-3.5" />
+                                                    Ver Evidência
+                                                </button>
                                             )}
                                         </div>
                                     </div>
@@ -165,6 +175,34 @@ export default function InventarioDetalhesPage({ funcionarioId, funcionarioNome,
                     </div>
                 )}
             </div>
+
+            {/* Evidence Modal */}
+            {selectedEvidence && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-auto">
+                        <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+                            <h2 className="text-lg font-semibold text-gray-900">Evidência de Entrega</h2>
+                            <button
+                                onClick={() => setSelectedEvidence(null)}
+                                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                            >
+                                <X className="h-5 w-5 text-gray-600" />
+                            </button>
+                        </div>
+                        <div className="p-6">
+                            <img
+                                src={selectedEvidence}
+                                alt="Evidência de entrega"
+                                className="w-full h-auto rounded-lg shadow-lg"
+                                onError={(e) => {
+                                    const target = e.target as HTMLImageElement;
+                                    target.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="300"%3E%3Crect fill="%23f3f4f6" width="400" height="300"/%3E%3Ctext fill="%236b7280" font-family="sans-serif" font-size="18" x="50%25" y="50%25" text-anchor="middle" dominant-baseline="middle"%3EImagem não disponível%3C/text%3E%3C/svg%3E';
+                                }}
+                            />
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
