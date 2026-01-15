@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { estoqueService } from '../../services/estoqueService';
 import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
 import { emitTo } from '@tauri-apps/api/event';
-import { ChevronLeft, Eye, Package, Calendar, Tag, AlertCircle } from 'lucide-react';
+import { ChevronLeft, Eye, Package, Calendar, Tag } from 'lucide-react';
 import { InventarioFuncionario } from '../../types/almoxarifado';
 
 interface InventarioDetalhesPageProps {

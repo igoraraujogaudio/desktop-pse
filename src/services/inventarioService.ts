@@ -3,8 +3,7 @@ import {
     TipoItem,
     InventarioFuncionario,
     InventarioEquipe,
-    ItemEquipe,
-    LaudoItemEquipe
+    ItemEquipe
 } from '../types/almoxarifado';
 
 // Desktop version of InventarioService

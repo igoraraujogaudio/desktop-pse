@@ -67,7 +67,7 @@ export const discountOrderService = {
             format: 'a4'
         });
 
-        return new Promise<Blob>((resolve, reject) => {
+        return new Promise<Blob>((resolve) => {
             doc.html(htmlContent, {
                 callback: function (doc) {
                     const blob = doc.output('blob');
@@ -86,7 +86,7 @@ export const discountOrderService = {
     async uploadPDF(pdfBlob: Blob, orderId: string): Promise<string | null> {
         try {
             const fileName = `${orderId}_${Date.now()}.pdf`;
-            const { data, error } = await supabase.storage
+            const { error } = await supabase.storage
                 .from('ordens-desconto')
                 .upload(fileName, pdfBlob, {
                     cacheControl: '3600',
