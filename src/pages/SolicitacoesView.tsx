@@ -10,7 +10,8 @@ import { supabase } from '../lib/supabase';
 import { DateFilter, DateFilterType } from '../components/DateFilter';
 import { SolicitacaoCard } from '../components/SolicitacaoCard';
 import { SolicitacaoDetailsPage } from './SolicitacaoDetailsPage';
-import TeamDeliveryModal from '../components/TeamDeliveryModal'; // Import added
+import TeamDeliveryModal from '../components/TeamDeliveryModal';
+import EmergencyModal from '../components/EmergencyModal';
 
 interface SolicitacoesViewProps {
     onEntregar: (solicitacao: SolicitacaoItem) => void;
@@ -55,7 +56,7 @@ export default function SolicitacoesView({ onEntregar, selectedSolicitacao, isDe
     const [availableBases, setAvailableBases] = useState<Base[]>([]);
 
     // Modal states
-    const [_emergencyModalOpen, setEmergencyModalOpen] = useState(false);
+    const [emergencyModalOpen, setEmergencyModalOpen] = useState(false);
     const [_employeeModalOpen, setEmployeeModalOpen] = useState(false);
     const [teamModalOpen, setTeamModalOpen] = useState(false);
 
@@ -595,6 +596,18 @@ export default function SolicitacoesView({ onEntregar, selectedSolicitacao, isDe
                     alert('Entrega para equipe criada com sucesso!');
                 }}
             />
+
+            {user && (
+                <EmergencyModal
+                    isOpen={emergencyModalOpen}
+                    onClose={() => setEmergencyModalOpen(false)}
+                    onSuccess={() => {
+                        loadSolicitacoes();
+                        loadStatusCounts();
+                    }}
+                    userId={user.id}
+                />
+            )}
         </div>
     );
 }

@@ -2,27 +2,26 @@ import { useState, useEffect } from 'react';
 import { estoqueService } from '../../services/estoqueService';
 import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
 import { emitTo } from '@tauri-apps/api/event';
-import { ChevronLeft, Eye, Package, Calendar, Tag } from 'lucide-react';
-import { InventarioFuncionario } from '../../types/almoxarifado';
+import { ChevronLeft, Eye, Package, Calendar, Tag, Users } from 'lucide-react';
 
-interface InventarioDetalhesPageProps {
-    funcionarioId: string;
-    funcionarioNome: string;
+interface InventarioEquipeDetalhesPageProps {
+    equipeId: string;
+    equipeNome: string;
     onBack: () => void;
 }
 
-export default function InventarioDetalhesPage({ funcionarioId, funcionarioNome, onBack }: InventarioDetalhesPageProps) {
+export default function InventarioEquipeDetalhesPage({ equipeId, equipeNome, onBack }: InventarioEquipeDetalhesPageProps) {
     const [loading, setLoading] = useState(true);
-    const [inventario, setInventario] = useState<InventarioFuncionario[]>([]);
+    const [inventario, setInventario] = useState<any[]>([]);
     const [sendingToSecondScreen, setSendingToSecondScreen] = useState(false);
 
     useEffect(() => {
         loadInventario();
-    }, [funcionarioId]);
+    }, [equipeId]);
 
     useEffect(() => {
         return () => {
-            console.log('🏁 [InventarioDetalhesPage] Leaving page, resetting employee view');
+            console.log('🏁 [InventarioEquipeDetalhesPage] Leaving page, resetting employee view');
             emitTo('employee', 'update-employee-view', { type: 'validation-cancelled' })
                 .catch(err => console.error('Error sensing reset to employee view:', err));
         };
@@ -31,68 +30,55 @@ export default function InventarioDetalhesPage({ funcionarioId, funcionarioNome,
     const loadInventario = async () => {
         try {
             setLoading(true);
-            const data = await estoqueService.getInventarioByFuncionario(funcionarioId);
+            const data = await estoqueService.getInventarioByEquipe(equipeId);
             setInventario(data);
         } catch (error) {
-            console.error('Erro ao carregar inventário:', error);
-            alert('Erro ao carregar inventário do funcionário');
+            console.error('Erro ao carregar inventário (Equipe):', error);
+            alert('Erro ao carregar inventário da equipe');
         } finally {
             setLoading(false);
         }
     };
 
     const handleMostrarInventario = async () => {
-        console.log('🔍 [InventarioDetalhesPage] handleMostrarInventario called');
+        console.log('🔍 [InventarioEquipeDetalhesPage] handleMostrarInventario called');
         try {
             setSendingToSecondScreen(true);
-            console.log('📡 [InventarioDetalhesPage] Sending to second screen set to true');
 
             // Buscar ou criar janela do funcionário
-            console.log('🪟 [InventarioDetalhesPage] Getting all windows...');
             const allWindows = await WebviewWindow.getAll();
-            console.log('🪟 [InventarioDetalhesPage] All windows:', allWindows.map(w => ({ label: w.label })));
-
             let employeeWindow = allWindows.find(w => w.label === 'employee');
-            console.log('🪟 [InventarioDetalhesPage] Employee window found:', !!employeeWindow);
 
             if (!employeeWindow) {
-                console.error('❌ [InventarioDetalhesPage] Employee window not found');
+                console.error('❌ [InventarioEquipeDetalhesPage] Employee window not found');
                 alert('Janela de funcionário não encontrada');
                 return;
             }
 
             // Mostrar janela
-            console.log('👁️ [InventarioDetalhesPage] Showing employee window...');
             await employeeWindow.show();
-            console.log('🎯 [InventarioDetalhesPage] Setting focus to employee window...');
             await employeeWindow.setFocus();
 
             // Enviar dados do inventário para a segunda tela
-            console.log('📤 [InventarioDetalhesPage] Emitting show-inventory event with data:', {
-                funcionario: { id: funcionarioId, nome: funcionarioNome },
-                inventoryCount: inventario.length
-            });
-
+            // Reuse "funcionario" structure for compatibility with EmployeeView
             await emitTo('employee', 'show-inventory', {
                 funcionario: {
-                    id: funcionarioId,
-                    nome: funcionarioNome
+                    id: equipeId,
+                    nome: equipeNome
                 },
                 inventario: inventario
             });
 
-            console.log('✅ [InventarioDetalhesPage] Inventory sent successfully');
-            alert('Inventário enviado para a segunda tela!');
+            console.log('✅ [InventarioEquipeDetalhesPage] Inventory sent successfully');
+            alert('Inventário da equipe enviado para a segunda tela!');
 
         } catch (error) {
-            console.error('❌ [InventarioDetalhesPage] Erro ao mostrar inventário:', error);
+            console.error('❌ [InventarioEquipeDetalhesPage] Erro ao mostrar inventário:', error);
             alert(`Erro ao enviar para segunda tela: ${error}`);
         } finally {
             setSendingToSecondScreen(false);
-            console.log('🏁 [InventarioDetalhesPage] handleMostrarInventario finished');
         }
     };
-
 
     return (
         <div className="w-full">
@@ -108,8 +94,9 @@ export default function InventarioDetalhesPage({ funcionarioId, funcionarioNome,
                                 <ChevronLeft className="h-5 w-5 text-gray-600" />
                             </button>
                             <div>
-                                <h1 className="text-lg font-semibold text-gray-900">
-                                    Inventário de {funcionarioNome}
+                                <h1 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                                    <Users className="h-5 w-5 text-blue-600" />
+                                    Inventário da Equipe: {equipeNome}
                                 </h1>
                                 <p className="text-sm text-gray-500">
                                     {loading ? 'Carregando...' : `${inventario.length} itens em posse`}
@@ -130,7 +117,6 @@ export default function InventarioDetalhesPage({ funcionarioId, funcionarioNome,
 
             {/* List */}
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-10">
-
                 {loading ? (
                     <div className="flex justify-center py-12">
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -139,7 +125,7 @@ export default function InventarioDetalhesPage({ funcionarioId, funcionarioNome,
                     <div className="bg-white rounded-lg shadow p-8 text-center">
                         <Package className="h-16 w-16 text-gray-300 mx-auto mb-4" />
                         <h3 className="text-lg font-medium text-gray-900">Nenhum item encontrado</h3>
-                        <p className="text-gray-500 mt-1">Este funcionário não possui itens em seu inventário.</p>
+                        <p className="text-gray-500 mt-1">Esta equipe não possui itens em seu inventário.</p>
                     </div>
                 ) : (
                     <div className="bg-white rounded-lg shadow overflow-hidden">
@@ -166,23 +152,23 @@ export default function InventarioDetalhesPage({ funcionarioId, funcionarioNome,
                                                         <Calendar className="h-3.5 w-3.5 mr-1" />
                                                         Entregue em: {new Date(item.data_entrega).toLocaleDateString()}
                                                     </div>
+                                                    {item.item_estoque?.codigo && (
+                                                        <div className="flex items-center">
+                                                            <span className="font-mono bg-gray-100 px-1.5 py-0.5 rounded text-gray-600">
+                                                                {item.item_estoque.codigo}
+                                                            </span>
+                                                        </div>
+                                                    )}
                                                 </div>
-                                                {item.status === 'em_uso' && (
-                                                    <span className="mt-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                                        Em Uso
-                                                    </span>
-                                                )}
                                             </div>
                                         </div>
                                         <div className="text-right">
-                                            <p className="text-sm font-medium text-gray-900">
-                                                Qtd: {item.quantidade}
+                                            <p className="text-lg font-bold text-blue-600">
+                                                {item.quantidade}
                                             </p>
-                                            {item.item_estoque?.codigo && (
-                                                <p className="text-xs text-gray-500 mt-1">
-                                                    Cód: {item.item_estoque.codigo}
-                                                </p>
-                                            )}
+                                            <p className="text-xs text-gray-500 uppercase tracking-wide">
+                                                Unidades
+                                            </p>
                                         </div>
                                     </div>
                                 </li>

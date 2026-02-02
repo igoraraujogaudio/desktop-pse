@@ -78,6 +78,8 @@ export interface SolicitacaoItem {
     id: string;
     nome: string;
   };
+  evidencia_url?: string;
+  evidencia_tipo?: 'foto' | 'arquivo';
 }
 
 export interface HistoricoFuncionario {
@@ -146,4 +148,6 @@ export interface DadosTroca {
   observacoes: string;
   gerarDesconto: boolean;
   inventoryItemId?: string;
+  valorDesconto?: number;
+  parcelasDesconto?: number;
 }

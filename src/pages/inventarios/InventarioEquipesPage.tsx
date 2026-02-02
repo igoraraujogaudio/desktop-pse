@@ -17,9 +17,10 @@ interface Equipe {
 
 interface InventarioEquipesPageProps {
     onBack: () => void;
+    onSelectEquipe: (id: string, nome: string) => void;
 }
 
-export default function InventarioEquipesPage({ onBack }: InventarioEquipesPageProps) {
+export default function InventarioEquipesPage({ onBack, onSelectEquipe }: InventarioEquipesPageProps) {
     const [equipes, setEquipes] = useState<Equipe[]>([]);
     const [inventarios, setInventarios] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -202,6 +203,7 @@ export default function InventarioEquipesPage({ onBack }: InventarioEquipesPageP
                                 <div
                                     key={equipe.id}
                                     className="bg-white rounded-lg shadow hover:shadow-md transition-shadow cursor-pointer p-4"
+                                    onClick={() => onSelectEquipe(equipe.id, equipe.nome)}
                                 >
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center space-x-4 flex-1">

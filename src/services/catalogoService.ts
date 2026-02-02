@@ -14,7 +14,6 @@ export const catalogoService = {
         base_id
       `)
             .eq('base_id', baseId)
-            .eq('ativo', true)
             .order('nome');
 
         if (error) {
@@ -40,7 +39,6 @@ export const catalogoService = {
         base_id
       `)
             .eq('base_id', baseId)
-            .eq('ativo', true)
             .or(`nome.ilike.%${searchTerm}%,codigo.ilike.%${searchTerm}%,categoria.ilike.%${searchTerm}%`)
             .order('nome')
             .limit(50);

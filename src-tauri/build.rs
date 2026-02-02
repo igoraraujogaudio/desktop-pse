@@ -1,13 +1,13 @@
 fn main() {
     tauri_build::build();
 
-    // Copiar libcidbio.dll do SDK para o diretório de build
-    let sdk_dir = std::path::Path::new("../IDBIO_SDK/lib/C_C++/win64");
+    // Copiar libcidbio.dll do exemplo C# (que funciona) para o diretório de build
+    // IMPORTANTE: A DLL do exemplo C# é diferente e funciona corretamente
+    let sdk_dir = std::path::Path::new("../IDBIO_SDK/example/C#/bin");
     let sdk_dll_path = sdk_dir.join("libcidbio.dll");
     
-    // Adicionar diretório do SDK ao search path do linker
-    println!("cargo:rustc-link-search=native={}", std::fs::canonicalize(sdk_dir).unwrap().display());
-    println!("cargo:rustc-link-lib=libcidbio");
+    // NOTA: Não precisamos linkar a biblioteca estaticamente, apenas carregar a DLL em runtime
+    // A DLL será carregada automaticamente pelo Windows quando o executável rodar
 
     if sdk_dll_path.exists() {
         let out_dir = std::env::var("OUT_DIR").unwrap();

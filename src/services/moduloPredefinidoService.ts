@@ -38,11 +38,11 @@ export const moduloPredefinidoEquipeService = {
                 nome_modulo,
                 descricao,
                 ativo,
-                itens:itens_modulo_equipe(
+                itens:itens_modulo_equipe!modulo_equipe_id(
                     id,
                     item_estoque_id,
                     quantidade_padrao,
-                    item:itens_estoque(id, nome, codigo, categoria)
+                    item:itens_estoque!item_estoque_id(id, nome, codigo, categoria)
                 )
             `)
             .eq('ativo', true)

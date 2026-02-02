@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { ArrowLeft, Package, CheckCircle, Truck, XCircle, RotateCcw, ArrowRightLeft } from 'lucide-react';
+import { ArrowLeft, Package, CheckCircle, Truck, XCircle, RotateCcw, ArrowRightLeft, Image as ImageIcon } from 'lucide-react';
 import { SolicitacaoItem } from '../types';
 import { Base } from '../types/contratos';
 import { SignatureRenderer } from '../components/SignatureRenderer';
@@ -35,6 +35,7 @@ export function SolicitacaoDetailsPage({
     const [inventarioItems, setInventarioItems] = useState<any[]>([]);
     const [loadingInventario, setLoadingInventario] = useState(false);
     const [inventarioModalOpen, setInventarioModalOpen] = useState(false);
+    const [evidenciaModalOpen, setEvidenciaModalOpen] = useState(false);
 
     // Fetch inventory data
     useEffect(() => {
@@ -268,6 +269,36 @@ export function SolicitacaoDetailsPage({
                                         </div>
                                     </div>
                                 </div>
+                            </div>
+                        )}
+
+                        {/* Evidência Fotográfica */}
+                        {solicitacao.evidencia_url && (
+                            <div className="group">
+                                <div className="flex items-center gap-2 font-bold text-gray-900 mb-3 text-sm uppercase tracking-wide">
+                                    <span className="text-green-500 group-hover:text-green-700 transition-colors">📷</span>
+                                    Evidência
+                                </div>
+                                <button
+                                    onClick={() => setEvidenciaModalOpen(true)}
+                                    className="w-full bg-white border border-gray-200 rounded-lg p-3 overflow-hidden group-hover:shadow-md transition-all cursor-pointer hover:border-green-300"
+                                >
+                                    <div className="relative w-full h-32 bg-gray-100 rounded-lg overflow-hidden">
+                                        <img
+                                            src={solicitacao.evidencia_url}
+                                            alt="Evidência da solicitação"
+                                            className="w-full h-full object-cover"
+                                        />
+                                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center">
+                                            <div className="opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 px-3 py-1.5 rounded-lg">
+                                                <span className="text-sm font-bold text-gray-700 flex items-center gap-1">
+                                                    <ImageIcon className="w-4 h-4" />
+                                                    Clique para ampliar
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </button>
                             </div>
                         )}
 
@@ -656,6 +687,38 @@ export function SolicitacaoDetailsPage({
                                     )}
                                 </div>
                             )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Evidence Modal */}
+            {evidenciaModalOpen && solicitacao.evidencia_url && (
+                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+                    <div className="bg-white rounded-2xl shadow-2xl max-w-5xl w-full max-h-[95vh] overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
+                        <div className="p-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+                            <div>
+                                <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                                    <ImageIcon className="w-5 h-5 text-green-600" />
+                                    Evidência da Solicitação
+                                </h2>
+                                <p className="text-sm text-gray-500">Foto anexada pelo solicitante</p>
+                            </div>
+                            <button
+                                onClick={() => setEvidenciaModalOpen(false)}
+                                className="p-2 hover:bg-gray-200 rounded-full transition-colors text-gray-500"
+                            >
+                                ✕
+                            </button>
+                        </div>
+                        <div className="p-8 overflow-y-auto flex-1 bg-gray-50/30 flex items-center justify-center">
+                            <div className="w-full max-w-4xl">
+                                <img
+                                    src={solicitacao.evidencia_url}
+                                    alt="Evidência da solicitação"
+                                    className="w-full h-auto rounded-xl shadow-lg border border-gray-200"
+                                />
+                            </div>
                         </div>
                     </div>
                 </div>

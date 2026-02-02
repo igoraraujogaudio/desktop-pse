@@ -35,8 +35,18 @@ pub fn validate_or_enroll_fingerprint(
     finger_id: Option<String>,
 ) -> Result<BiometricValidationResult, String> {
     // 1) inicializar SDK (porta opcional via env, ex.: "COM3")
+    // Se falhar, tentar reinicializar (útil quando o sensor é reconectado)
     let port = std::env::var("IDBIO_PORT").ok();
-    biometric_sdk::init_sdk(port.as_deref())?;
+    if let Err(e) = biometric_sdk::init_sdk(port.as_deref()) {
+        log::warn!("Falha na inicialização do SDK: {}. Tentando reinicializar...", e);
+        
+        // Tentar terminar e reinicializar
+        biometric_sdk::terminate_sdk();
+        std::thread::sleep(std::time::Duration::from_millis(500));
+        
+        // Segunda tentativa
+        biometric_sdk::init_sdk(port.as_deref())?;
+    }
 
     let supabase_url = std::env::var("SUPABASE_URL")
         .map_err(|e| format!("SUPABASE_URL não configurada: {e}"))?;

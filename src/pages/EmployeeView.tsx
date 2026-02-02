@@ -15,13 +15,22 @@ interface ValidationData {
   message?: string;
 }
 
+interface InventoryDisplayData {
+  funcionario: {
+    id: string;
+    nome: string;
+  };
+  inventario: any[];
+}
+
 export default function EmployeeView() {
   const [entregaData, setEntregaData] = useState<EntregaData | null>(null);
   const [validationData, setValidationData] = useState<ValidationData | null>(null);
   const [biometricInstruction, setBiometricInstruction] = useState<string>("");
   const [status, setStatus] = useState<
-    "aguardando" | "em_andamento" | "validacao" | "concluida"
+    "aguardando" | "em_andamento" | "validacao" | "concluida" | "mostrando_inventario"
   >("aguardando");
+  const [inventoryDisplayData, setInventoryDisplayData] = useState<InventoryDisplayData | null>(null);
 
   useEffect(() => {
     // Escutar eventos de entrega iniciada
@@ -68,10 +77,20 @@ export default function EmployeeView() {
         }
       );
 
+      const unlistenShowInventory = await listen<InventoryDisplayData>(
+        "show-inventory",
+        (event) => {
+          console.log("📢 [EmployeeView] Received show-inventory:", event.payload);
+          setInventoryDisplayData(event.payload);
+          setStatus("mostrando_inventario");
+        }
+      );
+
       return () => {
         unlistenEntrega();
         unlistenValidation();
         unlistenBiometric();
+        unlistenShowInventory();
       };
     };
 
@@ -252,6 +271,91 @@ export default function EmployeeView() {
             <div className="text-center text-gray-400 text-xs font-medium animate-pulse mt-4">
               Aguarde o sinal sonoro...
             </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+
+
+  if (status === "mostrando_inventario" && inventoryDisplayData) {
+    const { inventario, funcionario } = inventoryDisplayData;
+
+    return (
+      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-6 relative overflow-hidden">
+        {/* Background Elements */}
+        <div className="absolute top-0 right-0 p-12 opacity-5">
+          <Package className="w-96 h-96 text-blue-900" />
+        </div>
+
+        <div className="w-full max-w-7xl relative z-10 h-[85vh] flex flex-col gap-6">
+          {/* Header */}
+          <div className="bg-white rounded-[2rem] p-6 shadow-xl border border-gray-100 flex items-center justify-between">
+            <div className="flex items-center gap-6">
+              <div className="bg-blue-50 p-4 rounded-2xl">
+                <Package className="w-8 h-8 text-blue-600" />
+              </div>
+              <div>
+                <span className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-1">Visualização de Inventário</span>
+                <div className="text-2xl font-black text-gray-900 leading-tight">
+                  {funcionario.nome}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 bg-blue-600 px-6 py-3 rounded-xl text-white shadow-lg shadow-blue-200">
+              <span className="text-2xl font-bold">{inventario.length}</span>
+              <span className="text-sm font-medium opacity-80">itens em posse</span>
+            </div>
+          </div>
+
+          {/* Expanded Inventory List */}
+          <div className="bg-white/80 backdrop-blur-md rounded-[2rem] p-8 shadow-lg border border-gray-100 flex-1 flex flex-col overflow-hidden">
+            {inventario.length > 0 ? (
+              <div className="overflow-y-auto pr-2 flex-1 custom-scrollbar">
+                <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 content-start">
+                  {inventario.map((item, idx) => (
+                    <div key={idx} className="flex flex-col p-4 bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all hover:border-blue-200 group">
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="p-2 bg-gray-50 rounded-lg group-hover:bg-blue-50 transition-colors">
+                          <Package className="w-5 h-5 text-gray-400 group-hover:text-blue-500" />
+                        </div>
+                        <span className="text-xs font-bold text-gray-400 bg-gray-50 px-2 py-1 rounded-md group-hover:bg-blue-50 group-hover:text-blue-500">
+                          Qtd: {item.quantidade}
+                        </span>
+                      </div>
+
+                      <div className="mt-1">
+                        <div className="text-gray-900 font-bold truncate text-base mb-1" title={item.item_estoque?.nome}>
+                          {item.item_estoque?.nome || "Item sem nome"}
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <div className="text-xs text-gray-400 font-mono">
+                            {item.item_estoque?.codigo || 'S/N'}
+                          </div>
+                          <div className="text-[10px] text-gray-400 font-medium">
+                            {new Date(item.data_entrega).toLocaleDateString()}
+                          </div>
+                        </div>
+                      </div>
+
+                      {item.status === 'em_uso' && (
+                        <div className="mt-3 pt-3 border-t border-gray-50 flex items-center gap-1.5">
+                          <div className="w-1.5 h-1.5 rounded-full bg-green-500"></div>
+                          <span className="text-[10px] font-bold text-green-600 uppercase tracking-wide">Em Uso</span>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="flex-1 flex flex-col items-center justify-center text-gray-400">
+                <Package className="w-20 h-20 mb-4 opacity-10" />
+                <p className="text-xl font-medium">Nenhum item encontrado no inventário.</p>
+              </div>
+            )}
           </div>
         </div>
       </div>

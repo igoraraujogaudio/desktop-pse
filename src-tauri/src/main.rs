@@ -17,24 +17,26 @@ fn install_biometric_driver(app: AppHandle) -> Result<(), String> {
         .resource_dir()
         .map_err(|e| format!("Erro ao obter resource_dir: {e}"))?;
 
-    // Procurar pelo arquivo .inf do driver
-    let inf_path = resource_dir.join("controlidbio.inf");
+    // O Tauri mantém a estrutura de pastas, então o arquivo está em resources/controlidbio.inf
+    let inf_path = resource_dir.join("resources").join("controlidbio.inf");
+    
+    log::info!("Procurando driver INF em: {:?}", inf_path);
 
     if !inf_path.exists() {
         log::warn!("Arquivo INF não encontrado em {:?}, tentando caminhos alternativos...", inf_path);
         
         // Tentar múltiplos caminhos alternativos para desenvolvimento
         let possible_paths = vec![
-            // Caminho relativo ao diretório atual
+            // Caminho relativo ao diretório atual (dev)
             std::env::current_dir()
                 .ok()
                 .map(|p| p.join("src-tauri").join("resources").join("controlidbio.inf")),
-            // Caminho relativo ao executável
+            // Caminho relativo ao executável (dev)
             std::env::current_exe()
                 .ok()
                 .and_then(|p| p.parent().map(|p| p.to_path_buf()))
                 .map(|p| p.join("..").join("..").join("src-tauri").join("resources").join("controlidbio.inf")),
-            // Caminho absoluto conhecido
+            // Caminho absoluto conhecido (dev)
             Some(std::path::PathBuf::from("c:\\Dev\\app.pse\\almoxarifado-desktop\\src-tauri\\resources\\controlidbio.inf")),
         ];
         
@@ -148,11 +150,16 @@ fn main() {
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
+        .plugin(tauri_plugin_http::init())
         .invoke_handler(tauri::generate_handler![
             biometric_service::validate_or_enroll_fingerprint,
             install_biometric_driver,
             sdk_manager::check_sdk_status,
-            sdk_manager::sync_sdk_files
+            sdk_manager::sync_sdk_files,
+            biometric_sdk::initialize_biometric_sdk,
+            biometric_sdk::reinitialize_biometric_sdk,
+            biometric_sdk::test_biometric_connection,
+            biometric_sdk::list_com_ports
         ])
         .setup(|app| {
             // Verificar status do SDK na inicialização
@@ -168,6 +175,14 @@ fn main() {
             
             if !status.driver_installed {
                 log::warn!("Driver iDBio não detectado. O usuário precisará instalá-lo manualmente.");
+            }
+            
+            // NÃO inicializar SDK automaticamente na startup para evitar crash
+            // O SDK será inicializado sob demanda na primeira captura
+            #[cfg(feature = "biometric")]
+            {
+                log::info!("� SDK biométrico será inicializado sob demanda (na primeira captura)");
+                log::info!("💡 Use o painel de diagnóstico para testar a conexão do leitor");
             }
             
             // A segunda janela (employee) é configurada via tauri.conf.json

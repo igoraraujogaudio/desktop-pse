@@ -13,8 +13,20 @@
         "updater:default",
         "process:default",
         "core:window:default",
-        "core:window:allow-get-all",
+        "core:window:allow-get-all-windows",
         "core:window:allow-show",
-        "core:window:allow-set-focus"
+        "core:window:allow-set-focus",
+        {
+            "identifier": "http:default",
+            "allow": [
+                {
+                    "url": "https://app.pse.srv.br/*"
+                },
+                {
+                    "url": "https://supabase.pse.srv.br/*"
+                }
+            ],
+            "deny": []
+        }
     ]
 }

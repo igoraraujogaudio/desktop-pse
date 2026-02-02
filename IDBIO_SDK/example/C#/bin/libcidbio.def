@@ -1,0 +1,9 @@
+LIBRARY libcidbio
+EXPORTS
+    CIDBIO_SetSerialCommPort
+    CIDBIO_Init
+    CIDBIO_Terminate
+    CIDBIO_CaptureImageAndTemplate
+    CIDBIO_MatchTemplates
+    CIDBIO_FreeString
+    CIDBIO_FreeByteArray

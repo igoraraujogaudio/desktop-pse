@@ -2,10 +2,12 @@ import { supabase } from '../lib/supabase';
 
 export const teamService = {
     async getEquipesAtivas() {
+        // Status values might be 'ativa', 'ativo', or 'operando' based on web app logic
+        // Removing filter to match web app behavior and debug empty list
+        console.log('🔄 [teamService] Fetching all teams (no status filter)...');
         const { data, error } = await supabase
             .from('equipes')
             .select('id, nome, operacao, status, contrato_id, base_id')
-            .eq('status', 'ativa')
             .order('nome');
 
         if (error) {
@@ -13,6 +15,7 @@ export const teamService = {
             throw error;
         }
 
+        console.log(`✅ [teamService] Fetched ${data?.length || 0} teams.`);
         return data || [];
     },
 
@@ -22,7 +25,6 @@ export const teamService = {
         const { data, error } = await supabase
             .from('equipes')
             .select('id, nome, operacao, status, contrato_id, base_id')
-            .eq('status', 'ativa')
             .or(`nome.ilike.%${searchTerm}%,operacao.ilike.%${searchTerm}%`)
             .order('nome')
             .limit(50);

@@ -43,8 +43,24 @@ try {
     Write-Host "Driver instalado com sucesso!" -ForegroundColor Green
     Write-Host "==================================" -ForegroundColor Green
     Write-Host ""
-    Write-Host "Conecte o leitor biométrico iDBio agora." -ForegroundColor Yellow
-    Write-Host "O Windows deve reconhecê-lo automaticamente." -ForegroundColor Yellow
+    Write-Host "⚠️  IMPORTANTE - PRÓXIMOS PASSOS:" -ForegroundColor Yellow
+    Write-Host ""
+    Write-Host "1. REINICIE O WINDOWS" -ForegroundColor Cyan
+    Write-Host "   O driver precisa ser carregado pelo sistema" -ForegroundColor Gray
+    Write-Host ""
+    Write-Host "2. Após reiniciar, conecte o leitor biométrico USB" -ForegroundColor Cyan
+    Write-Host "   Aguarde o Windows reconhecer o dispositivo" -ForegroundColor Gray
+    Write-Host ""
+    Write-Host "3. Verifique no Device Manager:" -ForegroundColor Cyan
+    Write-Host "   - Abra 'Gerenciador de Dispositivos'" -ForegroundColor Gray
+    Write-Host "   - Procure por 'iDBio' em 'Portas (COM e LPT)'" -ForegroundColor Gray
+    Write-Host ""
+    Write-Host "4. Execute o aplicativo e teste a conexão" -ForegroundColor Cyan
+    Write-Host "   Use o painel de diagnóstico: '🔌 Testar Conexão do Leitor'" -ForegroundColor Gray
+    Write-Host ""
+    Write-Host "Resultado esperado:" -ForegroundColor Green
+    Write-Host "✅ Leitor funcionando corretamente na porta COMX" -ForegroundColor Green
+    Write-Host "✅ Qualidade da captura: 100%" -ForegroundColor Green
     Write-Host ""
 }
 catch {
@@ -56,4 +72,4 @@ catch {
     exit 1
 }
 
-Read-Host "Pressione ENTER para sair"
+Read-Host "Pressione ENTER para continuar"

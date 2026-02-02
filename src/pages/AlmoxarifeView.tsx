@@ -4,17 +4,24 @@ import { WebviewWindow, getAllWebviewWindows } from "@tauri-apps/api/webviewWind
 import { availableMonitors, currentMonitor } from "@tauri-apps/api/window";
 import { emitTo, listen } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
-import { Package, Fingerprint, Menu, LogOut, ClipboardList, CheckCircle, FolderOpen, FileText } from "lucide-react";
+import { Package, Fingerprint, LogOut, ClipboardList, CheckCircle, FolderOpen, FileText, PackagePlus, PackageMinus, ArrowLeftRight, Users } from "lucide-react";
 import type { SolicitacaoItem, EntregaData } from "../types";
 import { estoqueService } from "../services/estoqueService";
+import { discountOrderService } from "../services/discountOrderService";
 import SolicitacoesView from "./SolicitacoesView";
 import ModulosPredefinidosPage from "./ModulosPredefinidosPage";
 import InventariosHubPage from "./inventarios/InventariosHubPage";
 import InventarioEquipesPage from "./inventarios/InventarioEquipesPage";
 import InventarioFuncionariosPage from "./inventarios/InventarioFuncionariosPage";
 import InventarioDetalhesPage from "./inventarios/InventarioDetalhesPage";
+import InventarioEquipeDetalhesPage from "./inventarios/InventarioEquipeDetalhesPage";
 import OrdensDescontoPage from "./OrdensDescontoPage";
+import EntradaMaterialPage from "./EntradaMaterialPage";
+import DevolucaoPage from "./DevolucaoPage";
+import TransferenciasPage from "./TransferenciasPage";
+import EmprestimosTerceirosPage from "./EmprestimosTerceirosPage";
 import { TrocaModal, DadosTroca } from '../components/TrocaModal';
+import { PDFViewerModal } from '../components/PDFViewerModal';
 import UpdateChecker from "../components/UpdateChecker";
 import { useAuth } from "../hooks/useAuth";
 
@@ -24,9 +31,10 @@ interface AlmoxarifeViewProps {
 
 export default function AlmoxarifeView({ onLogout }: AlmoxarifeViewProps) {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<'solicitacoes' | 'modulos' | 'inventarios' | 'ordens-desconto'>('solicitacoes');
-  const [inventarioSubPage, setInventarioSubPage] = useState<'hub' | 'equipes' | 'funcionarios' | 'detalhes'>('hub');
+  const [activeTab, setActiveTab] = useState<'solicitacoes' | 'modulos' | 'inventarios' | 'ordens-desconto' | 'entrada-material' | 'devolucoes' | 'transferencias' | 'emprestimos-terceiros'>('solicitacoes');
+  const [inventarioSubPage, setInventarioSubPage] = useState<'hub' | 'equipes' | 'funcionarios' | 'detalhes' | 'detalhes-equipe'>('hub');
   const [selectedFuncionario, setSelectedFuncionario] = useState<{ id: string; nome: string } | null>(null);
+  const [selectedEquipe, setSelectedEquipe] = useState<{ id: string; nome: string } | null>(null);
   const [selectedSolicitacao, setSelectedSolicitacao] =
     useState<SolicitacaoItem | null>(null);
 
@@ -38,6 +46,10 @@ export default function AlmoxarifeView({ onLogout }: AlmoxarifeViewProps) {
   } | null>(null);
   const [employeeWindow, setEmployeeWindow] = useState<WebviewWindow | null>(null);
 
+  // PDF and Discount Order states
+  const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);
+  const [showPDFModal, setShowPDFModal] = useState(false);
+  const [currentDiscountOrderId, setCurrentDiscountOrderId] = useState<string | null>(null);
 
   // Last update trigger for SolicitacoesView
   const [lastUpdate, setLastUpdate] = useState<number>(0);
@@ -451,11 +463,26 @@ export default function AlmoxarifeView({ onLogout }: AlmoxarifeViewProps) {
     } catch (error) {
       unlisten();
       console.error("Erro na validação biométrica:", error);
+      
+      // Melhorar mensagem de erro baseada no tipo de erro
+      let errorMessage = 'Erro ao comunicar com o sensor biométrico';
+      const errorStr = String(error);
+      
+      if (errorStr.includes('não foi possível detectar o leitor')) {
+        errorMessage = 'Leitor biométrico não detectado. Verifique se está conectado na porta USB.';
+      } else if (errorStr.includes('código de erro -1')) {
+        errorMessage = 'Sensor não inicializado. Verifique a conexão USB e tente novamente.';
+      } else if (errorStr.includes('Verifique se o leitor está conectado')) {
+        errorMessage = 'Não foi possível comunicar com o leitor. Verifique a conexão USB.';
+      } else if (errorStr.includes('CIDBIO')) {
+        errorMessage = 'Erro no sensor biométrico. Tente reconectar o leitor USB.';
+      }
+      
       setBiometricModal(prev => ({
         ...prev,
         processing: false,
         validationResult: 'failure',
-        validationMessage: 'Erro ao comunicar com o sensor biométrico',
+        validationMessage: errorMessage,
         message: ''
       }));
       setIsDelivering(false);
@@ -468,22 +495,10 @@ export default function AlmoxarifeView({ onLogout }: AlmoxarifeViewProps) {
     try {
       setIsDelivering(true);
 
-      // Atualizar status da solicitação
-      const { error } = await supabase
-        .from("solicitacoes_itens")
-        .update({
-          status: "entregue",
-          quantidade_entregue: solicitacao.quantidade_aprovada,
-          entregue_em: new Date().toISOString(),
-        })
-        .eq("id", solicitacao.id);
-
-      if (error) throw error;
-
       // PROCESS RETURN IF PENDING
-      // This is done AFTER successful delivery
+      // This is done BEFORE delivery to ensure inventory is debited first
       if (pendingReturnData && pendingReturnData.solicitacao.id === solicitacao.id) {
-        console.log('🔄 [AlmoxarifeView] Processing pending return after delivery', pendingReturnData);
+        console.log('🔄 [AlmoxarifeView] Processing pending return BEFORE delivery', pendingReturnData);
         try {
           // Wait for return processing to complete
           await estoqueService.processarRetornoAposEntrega(
@@ -491,14 +506,30 @@ export default function AlmoxarifeView({ onLogout }: AlmoxarifeViewProps) {
             pendingReturnData.dados,
             user!.id
           );
-          setPendingReturnData(null);
           console.log('✅ [AlmoxarifeView] Return processed successfully');
         } catch (returnError) {
-          console.error('❌ [AlmoxarifeView] Error processing return after delivery:', returnError);
-          // We don't stop the delivery flow here, but we should alert the user
-          alert('Entrega concluída, mas houve um erro ao processar a devolução do item antigo. Verifique o log.');
+          console.error('❌ [AlmoxarifeView] Error processing return:', returnError);
+          alert('Erro ao processar devolução do item antigo. Operação cancelada.');
+          setIsDelivering(false);
+          return; // Stop delivery if return fails
         }
       }
+
+      // Atualizar status da solicitação
+      const { error } = await supabase
+        .from("solicitacoes_itens")
+        .update({
+          status: "entregue",
+          quantidade_entregue: solicitacao.quantidade_aprovada,
+          entregue_em: new Date().toISOString(),
+          entregue_por: user!.id
+        })
+        .eq("id", solicitacao.id);
+
+      if (error) throw error;
+
+      // Limpar dados pendentes após sucesso
+      setPendingReturnData(null);
 
       // Recarregar lista (handled by SolicitacoesView via event/prop if needed, but here we just clear selection)
       setSelectedSolicitacao(null);
@@ -520,28 +551,95 @@ export default function AlmoxarifeView({ onLogout }: AlmoxarifeViewProps) {
   const handleTrocaConfirm = async (dados: DadosTroca) => {
     if (!trocaModal.solicitacao || !user?.id) return;
 
-    console.log('📥 [AlmoxarifeView] Storing pending return data', dados);
+    console.log('📥 [AlmoxarifeView] Processing troca confirmation', dados);
 
-    // Store data to process later and proceed to validation
-    setPendingReturnData({
-      solicitacao: trocaModal.solicitacao,
-      dados
-    });
+    // If has discount data, create discount order first
+    if (dados.valorDesconto && dados.parcelasDesconto) {
+      try {
+        console.log('💰 [AlmoxarifeView] Creating discount order with PDF');
 
-    // TrocaModal component will close itself or show success state based on internal logic.
-    // Ideally, TrocaModal should call a success callback which we are treating as this confirm.
-    // If TrocaModal has internal success state, we might need to tell it we accepted.
-    // Assuming TrocaModal stays open and shows "Seguir para validação".
+        const result = await estoqueService.createDiscountOrder({
+          solicitacao: trocaModal.solicitacao,
+          // Use destinatario_id for individual deliveries, responsavel_equipe_id for team deliveries
+          funcionarioId: trocaModal.solicitacao.destinatario_id || trocaModal.solicitacao.responsavel_equipe_id!,
+          baseId: trocaModal.solicitacao.base_id!,
+          itemId: trocaModal.solicitacao.item_id!,
+          itemNome: trocaModal.solicitacao.item?.nome || '',
+          itemCodigo: trocaModal.solicitacao.item?.codigo || '',
+          valorTotal: dados.valorDesconto,
+          parcelas: dados.parcelasDesconto,
+          condicao: dados.condicao as 'danificado' | 'perdido',
+          observacoes: dados.observacoes,
+          criadoPor: user.id
+        });
+
+        console.log('✅ [AlmoxarifeView] Discount order created:', result.order.id);
+
+        // Store PDF and show modal
+        setPdfBlob(result.pdfBlob);
+        setCurrentDiscountOrderId(result.order.id);
+        setShowPDFModal(true);
+
+        // Store pending return data to process after PDF confirmation
+        setPendingReturnData({
+          solicitacao: trocaModal.solicitacao,
+          dados
+        });
+
+      } catch (error) {
+        console.error('❌ [AlmoxarifeView] Error creating discount order:', error);
+        alert('Erro ao criar ordem de desconto. Consulte o log.');
+        throw error;
+      }
+    } else {
+      // No discount, just store data for processing after delivery
+      setPendingReturnData({
+        solicitacao: trocaModal.solicitacao,
+        dados
+      });
+    }
   };
 
   const handleTrocaValidation = () => {
+    // If showing PDF modal, don't proceed to validation yet (wait for confirm)
+    if (showPDFModal) return;
+
     if (trocaModal.solicitacao) {
       // Proceed to validation, skipping the troca check since we just did it
       validarBiometriaEFinalizar(trocaModal.solicitacao, true);
     }
   };
 
+  const handlePDFConfirm = () => {
+    setShowPDFModal(false);
+    setCurrentDiscountOrderId(null);
+    // After confirming PDF, proceed to validation automatically
+    if (trocaModal.solicitacao) {
+      validarBiometriaEFinalizar(trocaModal.solicitacao, true);
+    }
+  };
 
+  const handlePDFClose = async () => {
+    if (currentDiscountOrderId) {
+      if (confirm("Deseja cancelar a ordem de desconto gerada? Isso irá excluir o registro.")) {
+        try {
+          await discountOrderService.deleteOrder(currentDiscountOrderId);
+          // Clear pending data as flow is cancelled
+          setPendingReturnData(null);
+          setPdfBlob(null);
+          setCurrentDiscountOrderId(null);
+          setShowPDFModal(false);
+          setTrocaModal(prev => ({ ...prev, open: false }));
+          console.log('🗑️ [AlmoxarifeView] Order cancelled and deleted.');
+        } catch (e) {
+          alert("Erro ao excluir ordem. Consulte o log.");
+          console.error(e);
+        }
+      }
+    } else {
+      setShowPDFModal(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-100/50 flex">
@@ -551,9 +649,6 @@ export default function AlmoxarifeView({ onLogout }: AlmoxarifeViewProps) {
         {/* Top Section - Navigation */}
         <div className="flex flex-col gap-2 w-full items-center">
           {/* Menu / Toggle */}
-          <div className="mb-4 p-2 text-gray-400 hover:text-gray-600 transition-colors cursor-pointer">
-            <Menu className="w-6 h-6" />
-          </div>
 
           <nav className="flex flex-col gap-3 w-full px-2 items-center">
             <button
@@ -614,6 +709,62 @@ export default function AlmoxarifeView({ onLogout }: AlmoxarifeViewProps) {
                 <span className="absolute -right-1 top-1/2 -translate-y-1/2 w-1 h-3 bg-blue-600 rounded-l-full" />
               )}
             </button>
+
+            <button
+              onClick={() => setActiveTab('entrada-material')}
+              className={`p-2.5 rounded-xl transition-all duration-300 relative group ${activeTab === 'entrada-material'
+                ? 'bg-blue-50 text-blue-600 shadow-sm'
+                : 'text-gray-400 hover:bg-gray-50 hover:text-gray-600'
+                }`}
+              title="Entrada de Material"
+            >
+              <PackagePlus className="w-5 h-5" />
+              {activeTab === 'entrada-material' && (
+                <span className="absolute -right-1 top-1/2 -translate-y-1/2 w-1 h-3 bg-blue-600 rounded-l-full" />
+              )}
+            </button>
+
+            <button
+              onClick={() => setActiveTab('devolucoes')}
+              className={`p-2.5 rounded-xl transition-all duration-300 relative group ${activeTab === 'devolucoes'
+                ? 'bg-blue-50 text-blue-600 shadow-sm'
+                : 'text-gray-400 hover:bg-gray-50 hover:text-gray-600'
+                }`}
+              title="Devoluções"
+            >
+              <PackageMinus className="w-5 h-5" />
+              {activeTab === 'devolucoes' && (
+                <span className="absolute -right-1 top-1/2 -translate-y-1/2 w-1 h-3 bg-blue-600 rounded-l-full" />
+              )}
+            </button>
+
+            <button
+              onClick={() => setActiveTab('transferencias')}
+              className={`p-2.5 rounded-xl transition-all duration-300 relative group ${activeTab === 'transferencias'
+                ? 'bg-blue-50 text-blue-600 shadow-sm'
+                : 'text-gray-400 hover:bg-gray-50 hover:text-gray-600'
+                }`}
+              title="Transferências Entre Bases"
+            >
+              <ArrowLeftRight className="w-5 h-5" />
+              {activeTab === 'transferencias' && (
+                <span className="absolute -right-1 top-1/2 -translate-y-1/2 w-1 h-3 bg-blue-600 rounded-l-full" />
+              )}
+            </button>
+
+            <button
+              onClick={() => setActiveTab('emprestimos-terceiros')}
+              className={`p-2.5 rounded-xl transition-all duration-300 relative group ${activeTab === 'emprestimos-terceiros'
+                ? 'bg-blue-50 text-blue-600 shadow-sm'
+                : 'text-gray-400 hover:bg-gray-50 hover:text-gray-600'
+                }`}
+              title="Empréstimos para Terceiros"
+            >
+              <Users className="w-5 h-5" />
+              {activeTab === 'emprestimos-terceiros' && (
+                <span className="absolute -right-1 top-1/2 -translate-y-1/2 w-1 h-3 bg-blue-600 rounded-l-full" />
+              )}
+            </button>
           </nav>
         </div>
 
@@ -671,6 +822,10 @@ export default function AlmoxarifeView({ onLogout }: AlmoxarifeViewProps) {
               {inventarioSubPage === 'equipes' && (
                 <InventarioEquipesPage
                   onBack={() => setInventarioSubPage('hub')}
+                  onSelectEquipe={(id, nome) => {
+                    setSelectedEquipe({ id, nome });
+                    setInventarioSubPage('detalhes-equipe');
+                  }}
                 />
               )}
               {inventarioSubPage === 'funcionarios' && (
@@ -689,12 +844,25 @@ export default function AlmoxarifeView({ onLogout }: AlmoxarifeViewProps) {
                   onBack={() => setInventarioSubPage('funcionarios')}
                 />
               )}
+              {inventarioSubPage === 'detalhes-equipe' && selectedEquipe && (
+                <InventarioEquipeDetalhesPage
+                  equipeId={selectedEquipe.id}
+                  equipeNome={selectedEquipe.nome}
+                  onBack={() => setInventarioSubPage('equipes')}
+                />
+              )}
             </>
           ) : activeTab === 'ordens-desconto' ? (
             <OrdensDescontoPage />
-          ) : (
-            null
-          )}
+          ) : activeTab === 'entrada-material' ? (
+            <EntradaMaterialPage onBack={() => setActiveTab('solicitacoes')} />
+          ) : activeTab === 'devolucoes' ? (
+            <DevolucaoPage onBack={() => setActiveTab('solicitacoes')} />
+          ) : activeTab === 'transferencias' ? (
+            <TransferenciasPage />
+          ) : activeTab === 'emprestimos-terceiros' ? (
+            <EmprestimosTerceirosPage />
+          ) : null}
         </div>
       </main>
       {/* Biometric Instruction Modal */}
@@ -830,6 +998,17 @@ export default function AlmoxarifeView({ onLogout }: AlmoxarifeViewProps) {
           onReadyForValidation={handleTrocaValidation}
           solicitacao={trocaModal.solicitacao}
           inventoryItem={trocaModal.inventoryItem}
+        />
+      )}
+
+      {/* PDF Viewer Modal */}
+      {showPDFModal && pdfBlob && (
+        <PDFViewerModal
+          isOpen={showPDFModal}
+          onClose={handlePDFClose}
+          onConfirm={handlePDFConfirm}
+          pdfBlob={pdfBlob}
+          title="Ordem de Desconto Gerada"
         />
       )}
       {/* Update Checker */}

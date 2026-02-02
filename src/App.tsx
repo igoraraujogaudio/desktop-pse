@@ -6,6 +6,7 @@ import AlmoxarifeView from "./pages/AlmoxarifeView";
 import EmployeeView from "./pages/EmployeeView";
 import Login from "./pages/Login";
 import SdkStatusCheck from "./components/SdkStatusCheck";
+import { BiometricStatusIndicator } from "./components/BiometricStatusIndicator";
 
 const INACTIVITY_TIMEOUT = 10 * 60 * 1000; // 10 minutes
 
@@ -115,7 +116,13 @@ function App() {
     return <SdkStatusCheck onReady={() => setSdkReady(true)} />;
   }
 
-  return <AlmoxarifeView onLogout={handleLogout} />;
+  return (
+    <>
+      <AlmoxarifeView onLogout={handleLogout} />
+      {/* Indicador de status do leitor biométrico */}
+      <BiometricStatusIndicator />
+    </>
+  );
 }
 
 export default App;

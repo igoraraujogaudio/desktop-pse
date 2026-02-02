@@ -40,8 +40,6 @@ export interface InventarioFuncionario {
     numero_laudo?: string
     validade_laudo?: string
     base_origem_id?: string
-    evidencia_url?: string
-    evidencia_tipo?: 'photo' | 'file' | 'foto' | 'arquivo'
     criado_em: string
     atualizado_em: string
 
