@@ -5,6 +5,7 @@ import { availableMonitors, currentMonitor } from "@tauri-apps/api/window";
 import { emitTo, listen } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
 import { Package, Fingerprint, LogOut, ClipboardList, CheckCircle, FolderOpen, FileText, PackagePlus, PackageMinus, ArrowLeftRight, Users } from "lucide-react";
+import UpdateButton from "../components/UpdateButton";
 import type { SolicitacaoItem, EntregaData } from "../types";
 import { estoqueService } from "../services/estoqueService";
 import { discountOrderService } from "../services/discountOrderService";
@@ -770,6 +771,9 @@ export default function AlmoxarifeView({ onLogout }: AlmoxarifeViewProps) {
 
         {/* Bottom Section - User Avatar */}
         <div className="flex flex-col gap-4 items-center">
+          {/* Update Button */}
+          <UpdateButton />
+          
           {/* Logout */}
           <button
             onClick={onLogout}
