@@ -1,0 +1,11 @@
+{
+  "version": "1.0.2",
+  "notes": "Nova versão disponível com melhorias e correções",
+  "pub_date": "2026-02-02T14:56:00Z",
+  "platforms": {
+    "windows-x86_64": {
+      "signature": "",
+      "url": "https://github.com/igoraraujogaudio/desktop-pse/releases/download/v1.0.2/Almoxarifado_Desktop_1.0.2_x64-setup.exe"
+    }
+  }
+}
