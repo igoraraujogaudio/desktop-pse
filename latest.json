@@ -1,11 +1,11 @@
 ﻿{
     "platforms":  {
                       "windows-x86_64":  {
-                                             "signature":  "",
+                                             "signature":  "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSRFBtZVVCTDZ3WjBNT2JIV3NUSUsyQjJpKzFlK1hCYUFZM2RWczdQTzJCSGJTSzZQQkNlTHRKSUlkNUtqZ3NiRGE2a3M3emU0KzJqb0FiOGNwdTlkK1A1RjdtcUw5T3dRPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzcwMDU3MTk5CWZpbGU6QWxtb3hhcmlmYWRvIERlc2t0b3BfMS4wLjJfeDY0LXNldHVwLmV4ZQpIb2h1cnZjNHo2aTBEK1pxMFVBSFZvNmhBVWpNQkdJMVlvMEQwZUFBSVIxR3F0TGlDcXAwQkYxWEYzWmpqWTFDUTVQQXZocmQ5OWJvZ1JKajVqSGRBUT09Cg==",
                                              "url":  "https://github.com/igoraraujogaudio/desktop-pse/releases/download/v1.0.2/Almoxarifado Desktop_1.0.2_x64-setup.exe"
                                          }
                   },
-    "pub_date":  "2026-02-02T17:15:04Z",
+    "pub_date":  "2026-02-02T18:33:19Z",
     "version":  "1.0.2",
-    "notes":  "Atualizacao v1.0.2 com sistema de updater funcionando"
+    "notes":  "Atualizacao v1.0.2 - Sistema de updater com assinatura funcionando"
 }
