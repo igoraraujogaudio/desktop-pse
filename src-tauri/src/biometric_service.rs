@@ -161,37 +161,53 @@ fn validate_or_enroll_fingerprint_blocking(
 
         // Loop de 3 capturas
         for i in 1..=3 {
-            // Avisar frontend para pedir o dedo
-            let _ = app.emit("biometric-instruction", format!("Posicione o dedo ({}/3)", i));
+            log_biometric(&format!("=== INÍCIO CAPTURA {}/3 ===", i));
             
-            // Captura (bloqueante - espera o dedo)
-            // Pequeno delay para garantir que o usuário viu a mensagem ou tirou o dedo anterior
-            std::thread::sleep(std::time::Duration::from_millis(500)); 
+            // Avisar frontend para pedir o dedo
+            log_biometric(&format!("Emitindo: Posicione o dedo ({}/3)", i));
+            let _ = app.emit("biometric-instruction", format!("📍 Posicione o dedo no leitor ({}/3)", i));
+            
+            // Delay maior para garantir que o usuário viu a mensagem e posicionou o dedo
+            std::thread::sleep(std::time::Duration::from_millis(3000)); 
 
+            // Avisar que está aguardando a captura
+            log_biometric(&format!("Emitindo: Aguardando leitura {}/3", i));
+            let _ = app.emit("biometric-instruction", format!("⏳ Aguardando leitura {}/3...", i));
+
+            log_biometric(&format!("Chamando capture_with_sdk() para captura {}/3", i));
             let (tmpl, quality) = match biometric_sdk::capture_with_sdk() {
-                Ok(res) => res,
+                Ok(res) => {
+                    log_biometric(&format!("capture_with_sdk() retornou OK para captura {}/3", i));
+                    res
+                },
                 Err(e) => {
                     log_biometric(&format!("Erro na captura {}: {}", i, e));
-                    let _ = app.emit("biometric-instruction", format!("Erro na captura {}: {}", i, e));
+                    let _ = app.emit("biometric-instruction", format!("❌ Erro na captura {}: {}", i, e));
                     return Err(e);
                 }
             };
 
             log::info!("Captura {}/3: Qualidade {}", i, quality);
+            log_biometric(&format!("Qualidade captura {}/3: {}", i, quality));
 
             if quality > best_quality {
                 best_quality = quality;
                 best_template = tmpl;
             }
 
-            // Avisar sucesso parcial
-            let _ = app.emit("biometric-instruction", format!("Leitura {} OK (Qualidade: {})", i, quality));
+            // Avisar sucesso e aguardar para usuário ver a mensagem
+            log_biometric(&format!("Emitindo: Leitura {} concluída", i));
+            let _ = app.emit("biometric-instruction", format!("✅ Leitura {} concluída! Qualidade: {}%", i, quality));
+            std::thread::sleep(std::time::Duration::from_millis(2000));
             
             // Pedir para retirar o dedo (se não for a última)
             if i < 3 {
-                 let _ = app.emit("biometric-instruction", "Retire o dedo...");
-                 std::thread::sleep(std::time::Duration::from_secs(2));
+                 log_biometric("Emitindo: Retire o dedo");
+                 let _ = app.emit("biometric-instruction", "👆 Retire o dedo do leitor...");
+                 std::thread::sleep(std::time::Duration::from_millis(3000));
             }
+            
+            log_biometric(&format!("=== FIM CAPTURA {}/3 ===", i));
         }
 
         // Validar qualidade mínima (90% exigido)

@@ -380,10 +380,15 @@ export default function AlmoxarifeView({ onLogout }: AlmoxarifeViewProps) {
     }));
 
     // Listen to real-time instructions
+    let lastMessage = '';
     const unlisten = await listen<string>('biometric-instruction', (event) => {
-      setBiometricModal(prev => ({ ...prev, message: event.payload }));
-      // Forward to employee window
-      emitTo("employee", "biometric-instruction", event.payload).catch(console.error);
+      // Evitar atualizações duplicadas
+      if (event.payload !== lastMessage) {
+        lastMessage = event.payload;
+        setBiometricModal(prev => ({ ...prev, message: event.payload }));
+        // Forward to employee window
+        emitTo("employee", "biometric-instruction", event.payload).catch(console.error);
+      }
     });
 
     const getFingerName = (finger: string) => {
