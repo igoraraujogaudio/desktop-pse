@@ -5,6 +5,7 @@ import { catalogoService } from '../services/catalogoService';
 import { estoqueService } from '../services/estoqueService';
 import { moduloPredefinidoEquipeService } from '../services/moduloPredefinidoService';
 import { baseService } from '../services/baseService';
+import { userService } from '../services/userService';
 import { useAuth } from '../hooks/useAuth';
 
 interface TeamDeliveryModalProps {
@@ -18,9 +19,10 @@ export default function TeamDeliveryModal({ isOpen, onClose, onSuccess }: TeamDe
 
     // Data States
     const [teams, setTeams] = useState<any[]>([]);
-    const [members, setMembers] = useState<any[]>([]);
+    const [funcionarios, setFuncionarios] = useState<any[]>([]);
     const [allModules, setAllModules] = useState<any[]>([]);
     const [bases, setBases] = useState<any[]>([]);
+    const [allItems, setAllItems] = useState<any[]>([]);
 
     // Selection States
     const [selectedTeam, setSelectedTeam] = useState<string>('');
@@ -52,7 +54,7 @@ export default function TeamDeliveryModal({ isOpen, onClose, onSuccess }: TeamDe
         : [];
 
     const filteredMembers = memberSearchTerm
-        ? members.filter(m => 
+        ? funcionarios.filter(m => 
             m.nome?.toLowerCase().includes(memberSearchTerm.toLowerCase()) ||
             m.matricula?.toLowerCase().includes(memberSearchTerm.toLowerCase())
           )
@@ -75,24 +77,25 @@ export default function TeamDeliveryModal({ isOpen, onClose, onSuccess }: TeamDe
     }, [isOpen]);
 
     useEffect(() => {
-        if (selectedTeam) {
-            loadTeamMembers(selectedTeam);
+        if (selectedBase) {
+            loadAllItems(selectedBase);
         } else {
-            setMembers([]);
-            setSelectedMember('');
+            setAllItems([]);
         }
-    }, [selectedTeam]);
+    }, [selectedBase]);
 
     const loadInitialData = async () => {
         setLoading(true);
         try {
-            const [teamsData, modulesData, basesData] = await Promise.all([
+            const [teamsData, modulesData, basesData, funcionariosData] = await Promise.all([
                 teamService.getEquipesAtivas(),
                 moduloPredefinidoEquipeService.getModulosPredefinidosEquipe(),
-                user ? baseService.getUserBases(user.id) : Promise.resolve([])
+                user ? baseService.getUserBases(user.id) : Promise.resolve([]),
+                userService.getUsuariosAtivos()
             ]);
             setTeams(teamsData);
             setAllModules(modulesData);
+            setFuncionarios(funcionariosData);
             
             // Extract bases from user bases
             const userBases = basesData
@@ -111,33 +114,30 @@ export default function TeamDeliveryModal({ isOpen, onClose, onSuccess }: TeamDe
         }
     };
 
-    const loadTeamMembers = async (teamId: string) => {
+    const loadAllItems = async (baseId: string) => {
         try {
-            const membersData = await teamService.getTeamMembers(teamId);
-            setMembers(membersData);
+            const itemsData = await catalogoService.getItensCatalogoComEstoque(baseId);
+            setAllItems(itemsData);
         } catch (error) {
-            console.error('Error loading team members:', error);
+            console.error('Error loading items:', error);
         }
     };
 
-    const handleSearchItems = async (term: string) => {
+    const handleSearchItems = (term: string) => {
         setItemSearchTerm(term);
-        if (term.length < 3) {
+        if (!term || term.length < 2) {
             setItemSearchResults([]);
             return;
         }
 
-        if (!selectedBase) {
-            console.warn('No base selected for item search');
-            return;
-        }
-
-        try {
-            const results = await catalogoService.searchItems(term, selectedBase);
-            setItemSearchResults(results);
-        } catch (error) {
-            console.error('Error searching items:', error);
-        }
+        const searchLower = term.toLowerCase();
+        const results = allItems.filter(item => 
+            item.nome?.toLowerCase().includes(searchLower) ||
+            item.codigo?.toLowerCase().includes(searchLower) ||
+            item.categoria?.toLowerCase().includes(searchLower)
+        ).slice(0, 50);
+        
+        setItemSearchResults(results);
     };
 
     const handleAddItem = (item: any, quantity: number = 1) => {
@@ -331,8 +331,7 @@ export default function TeamDeliveryModal({ isOpen, onClose, onSuccess }: TeamDe
                                     value={memberSearchTerm}
                                     onChange={e => setMemberSearchTerm(e.target.value)}
                                     placeholder="Digite para buscar responsável..."
-                                    disabled={!selectedTeam}
-                                    className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none bg-white disabled:bg-gray-100 disabled:text-gray-400 text-sm"
+                                    className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none bg-white text-sm"
                                 />
                                 {memberSearchTerm && (
                                     <X 
@@ -364,7 +363,7 @@ export default function TeamDeliveryModal({ isOpen, onClose, onSuccess }: TeamDe
                                 <div className="mt-2 flex items-center gap-2 p-3 bg-blue-50 border border-blue-200 rounded-xl">
                                     <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
                                     <div className="text-sm text-blue-700">
-                                        <strong>Selecionado:</strong> {members.find(m => m.id === selectedMember)?.nome}
+                                        <strong>Selecionado:</strong> {funcionarios.find(m => m.id === selectedMember)?.nome}
                                     </div>
                                 </div>
                             )}
