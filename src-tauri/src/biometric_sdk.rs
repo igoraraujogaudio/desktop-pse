@@ -1,5 +1,24 @@
 use std::ffi::{CStr, CString};
+use std::fs::OpenOptions;
+use std::io::Write;
 use std::os::raw::{c_char, c_int, c_uchar, c_uint};
+
+fn log_biometric(message: &str) {
+    let mut log_dir = std::env::var("PROGRAMDATA")
+        .map(|p| std::path::PathBuf::from(p).join("AlmoxarifadoDesktop"))
+        .unwrap_or_else(|_| std::env::temp_dir().join("AlmoxarifadoDesktop"));
+
+    if let Err(e) = std::fs::create_dir_all(&log_dir) {
+        log::warn!("Falha ao criar diretório de log biométrico: {}", e);
+        return;
+    }
+
+    log_dir.push("biometria.log");
+
+    if let Ok(mut file) = OpenOptions::new().create(true).append(true).open(&log_dir) {
+        let _ = writeln!(file, "[{}] {}", chrono::Local::now().to_rfc3339(), message);
+    }
+}
 
 #[cfg(feature = "biometric")]
 /// ATENÇÃO:
@@ -209,6 +228,7 @@ fn detect_biometric_port() -> Option<String> {
 /// Útil quando o sensor é reconectado ou muda de porta USB
 #[tauri::command]
 pub fn reinitialize_biometric_sdk() -> Result<String, String> {
+    log_biometric("reinitialize_biometric_sdk() called");
     log::info!("🔄 Reinicializando SDK biométrico...");
     
     unsafe {
@@ -237,21 +257,25 @@ pub fn reinitialize_biometric_sdk() -> Result<String, String> {
 pub fn test_biometric_connection() -> Result<String, String> {
     use serde_json::json;
     
+    log_biometric("test_biometric_connection() called");
     log::info!("🔬 Testando conexão com o leitor biométrico...");
     
     // Verificar se consegue detectar a porta
     let detected_port = detect_biometric_port();
     
     if detected_port.is_none() {
+        log_biometric("detect_biometric_port() returned None");
         return Err("Não foi possível detectar o leitor em nenhuma porta COM1-COM20. Verifique se o driver está instalado e o leitor está conectado.".to_string());
     }
     
     let port = detected_port.unwrap();
+    log_biometric(&format!("Porta detectada: {}", port));
     log::info!("✅ Porta detectada: {}", port);
     
     // Tentar inicializar
     match init_sdk(Some(&port)) {
         Ok(_) => {
+            log_biometric("init_sdk() OK");
             log::info!("✅ SDK inicializado com sucesso");
             
             // Aguardar um pouco mais para o hardware estabilizar
@@ -262,6 +286,7 @@ pub fn test_biometric_connection() -> Result<String, String> {
             log::info!("🔬 Testando captura (posicione o dedo no leitor)...");
             match capture_with_sdk() {
                 Ok((_, quality)) => {
+                    log_biometric(&format!("capture_with_sdk() OK. quality={}", quality));
                     let result = json!({
                         "success": true,
                         "port": port,
@@ -271,6 +296,7 @@ pub fn test_biometric_connection() -> Result<String, String> {
                     Ok(result.to_string())
                 },
                 Err(e) => {
+                    log_biometric(&format!("capture_with_sdk() error: {}", e));
                     if e.contains("código de erro -1") || e.contains("código: -1") {
                         Err(format!(
                             "⚠️ PROBLEMA DE DRIVER DETECTADO\n\n\
@@ -296,6 +322,7 @@ pub fn test_biometric_connection() -> Result<String, String> {
             }
         },
         Err(e) => {
+            log_biometric(&format!("init_sdk() error: {}", e));
             Err(format!("Porta {} detectada mas falha na inicialização: {}", port, e))
         }
     }
@@ -369,6 +396,7 @@ pub fn list_com_ports() -> Result<String, String> {
 /// Se falhar, tenta fazer Terminate + Init novamente (útil para reconexão USB).
 pub fn init_sdk(_port: Option<&str>) -> Result<(), String> {
     unsafe {
+        log_biometric("init_sdk() called");
         // IMPORTANTE: O exemplo oficial do SDK funciona SEM chamar SetSerialCommPort
         // O SDK detecta automaticamente o leitor biométrico
         // Apenas chamamos CIDBIO_Init() diretamente
@@ -379,14 +407,17 @@ pub fn init_sdk(_port: Option<&str>) -> Result<(), String> {
         log::debug!("CIDBIO_Init retornou: {}", r);
         
         if r == 1 {
+            log_biometric("CIDBIO_Init returned 1 (already init)");
             log::warn!("SDK já estava inicializado (CIDBIO_WARNING_ALREADY_INIT). Continuando...");
             std::thread::sleep(std::time::Duration::from_millis(500));
             return Ok(());
         } else if r == 0 {
+            log_biometric("CIDBIO_Init returned 0 (success)");
             log::info!("✅ SDK inicializado com sucesso!");
             std::thread::sleep(std::time::Duration::from_millis(800));
             return Ok(());
         } else {
+            log_biometric(&format!("CIDBIO_Init error: {}", r));
             // Erro na inicialização
             log::error!("❌ CIDBIO_Init falhou com código: {}", r);
             
@@ -476,6 +507,7 @@ pub fn terminate_sdk() {
 /// Se falhar com erro -1 (SDK não inicializado), tenta reinicializar automaticamente.
 pub fn capture_with_sdk() -> Result<(String, i32), String> {
     unsafe {
+        log_biometric("capture_with_sdk() called");
         let mut tmpl_ptr: *mut c_char = std::ptr::null_mut();
         let mut img_ptr: *mut c_uchar = std::ptr::null_mut();
         let mut w: c_uint = 0;
@@ -491,6 +523,7 @@ pub fn capture_with_sdk() -> Result<(String, i32), String> {
         );
 
         if r == -1 {
+            log_biometric("CIDBIO_CaptureImageAndTemplate returned -1; reinitializing");
             // Erro -1 geralmente indica SDK não inicializado
             log::warn!("CIDBIO_CaptureImageAndTemplate retornou -1 (SDK não inicializado). Tentando reinicializar...");
             
@@ -512,12 +545,14 @@ pub fn capture_with_sdk() -> Result<(String, i32), String> {
             );
             
             if r2 != 0 {
+                log_biometric(&format!("Capture retry failed: {}", r2));
                 return Err(format!(
                     "CIDBIO_CaptureImageAndTemplate falhou mesmo após reinicialização. Código: {}. Verifique se o leitor está conectado.",
                     r2
                 ));
             }
         } else if r != 0 {
+            log_biometric(&format!("CIDBIO_CaptureImageAndTemplate error: {}", r));
             return Err(format!(
                 "CIDBIO_CaptureImageAndTemplate retornou código de erro {}",
                 r
@@ -525,6 +560,7 @@ pub fn capture_with_sdk() -> Result<(String, i32), String> {
         }
 
         if tmpl_ptr.is_null() {
+            log_biometric("Template returned null pointer");
             return Err("Template retornou ponteiro nulo".into());
         }
 

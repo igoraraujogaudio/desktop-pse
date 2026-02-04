@@ -111,11 +111,12 @@ pub fn sync_sdk_dll(app: &AppHandle) -> Result<PathBuf, String> {
         .resource_dir()
         .map_err(|e| format!("Erro ao obter resource_dir: {}", e))?;
 
+    // Procurar a DLL em resources/ primeiro
     let source_dll = resource_dir.join("libcidbio.dll");
     
     if !source_dll.exists() {
         return Err(format!(
-            "DLL do SDK não encontrada nos recursos em: {:?}",
+            "DLL do SDK não encontrada em: {:?}",
             source_dll
         ));
     }

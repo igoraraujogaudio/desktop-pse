@@ -3,17 +3,20 @@ import { supabase } from '../lib/supabase';
 export const moduloPredefinidoService = {
     async getModulosPredefinidos() {
         const { data, error } = await supabase
-            .from('modulos_predefinidos')
+            .from('modulos_predefinidos_cargo')
             .select(`
         id,
         nome_modulo,
         descricao,
         ativo,
-        itens:itens_modulo_predefinido(
+        cargo_id,
+        itens:modulos_predefinidos_itens!modulo_id(
           id,
           item_estoque_id,
           quantidade_padrao,
-          item:itens_estoque(id, nome, codigo, categoria)
+          obrigatorio,
+          ordem,
+          item:itens_estoque!item_estoque_id(id, nome, codigo, categoria)
         )
       `)
             .eq('ativo', true)
@@ -38,10 +41,12 @@ export const moduloPredefinidoEquipeService = {
                 nome_modulo,
                 descricao,
                 ativo,
-                itens:itens_modulo_equipe!modulo_equipe_id(
+                itens:modulos_predefinidos_itens_equipe!modulo_id(
                     id,
                     item_estoque_id,
                     quantidade_padrao,
+                    obrigatorio,
+                    ordem,
                     item:itens_estoque!item_estoque_id(id, nome, codigo, categoria)
                 )
             `)
@@ -82,13 +87,13 @@ export const moduloPredefinidoEquipeService = {
         // 2. Add Items
         if (items.length > 0) {
             const itemsToInsert = items.map(i => ({
-                modulo_equipe_id: modulo.id,
+                modulo_id: modulo.id,
                 item_estoque_id: i.item_id,
                 quantidade_padrao: i.quantidade
             }));
 
             const { error: itemsError } = await supabase
-                .from('itens_modulo_equipe')
+                .from('modulos_predefinidos_itens_equipe')
                 .insert(itemsToInsert);
 
             if (itemsError) throw itemsError;

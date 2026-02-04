@@ -61,7 +61,8 @@
       "resources/controlidbio.cat",
       "resources/controlidProxUSB.inf",
       "resources/controlididproxusb.cat",
-      "../IDBIO_SDK/example/C#/bin/libcidbio.dll"
+      "resources/cleanup-uninstall.ps1",
+      "libcidbio.dll"
     ],
     "windows": {
       "certificateThumbprint": null,

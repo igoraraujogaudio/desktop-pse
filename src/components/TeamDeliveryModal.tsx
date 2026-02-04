@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { X, Search, Plus, Trash, Users, User, Package, Box } from 'lucide-react';
+import { X, Search, Plus, Trash, Users, Package, Box } from 'lucide-react';
 import { teamService } from '../services/teamService';
 import { catalogoService } from '../services/catalogoService';
 import { estoqueService } from '../services/estoqueService';
 import { moduloPredefinidoEquipeService } from '../services/moduloPredefinidoService';
+import { baseService } from '../services/baseService';
 import { useAuth } from '../hooks/useAuth';
 
 interface TeamDeliveryModalProps {
@@ -19,10 +20,12 @@ export default function TeamDeliveryModal({ isOpen, onClose, onSuccess }: TeamDe
     const [teams, setTeams] = useState<any[]>([]);
     const [members, setMembers] = useState<any[]>([]);
     const [allModules, setAllModules] = useState<any[]>([]);
+    const [bases, setBases] = useState<any[]>([]);
 
     // Selection States
     const [selectedTeam, setSelectedTeam] = useState<string>('');
     const [selectedMember, setSelectedMember] = useState<string>('');
+    const [selectedBase, setSelectedBase] = useState<string>('');
     const [observacoes, setObservacoes] = useState('');
 
     // Item Management
@@ -30,6 +33,8 @@ export default function TeamDeliveryModal({ isOpen, onClose, onSuccess }: TeamDe
     const [activeTab, setActiveTab] = useState<'avulso' | 'modulo'>('modulo');
 
     // Search States
+    const [teamSearchTerm, setTeamSearchTerm] = useState('');
+    const [memberSearchTerm, setMemberSearchTerm] = useState('');
     const [itemSearchTerm, setItemSearchTerm] = useState('');
     const [itemSearchResults, setItemSearchResults] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
@@ -39,15 +44,33 @@ export default function TeamDeliveryModal({ isOpen, onClose, onSuccess }: TeamDe
         ? allModules.filter(m => m.equipe_id === selectedTeam)
         : [];
 
+    const filteredTeams = teamSearchTerm
+        ? teams.filter(t => 
+            t.nome?.toLowerCase().includes(teamSearchTerm.toLowerCase()) ||
+            t.operacao?.toLowerCase().includes(teamSearchTerm.toLowerCase())
+          )
+        : [];
+
+    const filteredMembers = memberSearchTerm
+        ? members.filter(m => 
+            m.nome?.toLowerCase().includes(memberSearchTerm.toLowerCase()) ||
+            m.matricula?.toLowerCase().includes(memberSearchTerm.toLowerCase())
+          )
+        : [];
+
     useEffect(() => {
         if (isOpen) {
             loadInitialData();
             // Reset states
             setSelectedTeam('');
             setSelectedMember('');
+            setSelectedBase('');
             setItems([]);
             setObservacoes('');
             setActiveTab('modulo');
+            setTeamSearchTerm('');
+            setMemberSearchTerm('');
+            setItemSearchTerm('');
         }
     }, [isOpen]);
 
@@ -63,12 +86,24 @@ export default function TeamDeliveryModal({ isOpen, onClose, onSuccess }: TeamDe
     const loadInitialData = async () => {
         setLoading(true);
         try {
-            const [teamsData, modulesData] = await Promise.all([
+            const [teamsData, modulesData, basesData] = await Promise.all([
                 teamService.getEquipesAtivas(),
-                moduloPredefinidoEquipeService.getModulosPredefinidosEquipe()
+                moduloPredefinidoEquipeService.getModulosPredefinidosEquipe(),
+                user ? baseService.getUserBases(user.id) : Promise.resolve([])
             ]);
             setTeams(teamsData);
             setAllModules(modulesData);
+            
+            // Extract bases from user bases
+            const userBases = basesData
+                .map((ub: any) => ub.base)
+                .filter((base: any) => base && base.ativa);
+            setBases(userBases);
+            
+            // Auto-select base if user has access to only one
+            if (userBases.length === 1) {
+                setSelectedBase(userBases[0].id);
+            }
         } catch (error) {
             console.error('Error loading initial data:', error);
         } finally {
@@ -92,9 +127,13 @@ export default function TeamDeliveryModal({ isOpen, onClose, onSuccess }: TeamDe
             return;
         }
 
+        if (!selectedBase) {
+            console.warn('No base selected for item search');
+            return;
+        }
+
         try {
-            // FIXME: Hardcoded baseId '1' for now, should come from context or selection
-            const results = await catalogoService.searchItems(term, '1');
+            const results = await catalogoService.searchItems(term, selectedBase);
             setItemSearchResults(results);
         } catch (error) {
             console.error('Error searching items:', error);
@@ -170,12 +209,17 @@ export default function TeamDeliveryModal({ isOpen, onClose, onSuccess }: TeamDe
             return;
         }
 
+        if (!selectedBase) {
+            alert('Selecione uma base.');
+            return;
+        }
+
         try {
             setLoading(true);
             await estoqueService.createTeamDelivery({
                 equipe_id: selectedTeam,
                 responsavel_id: selectedMember,
-                base_id: '1', // FIXME: Hardcoded baseId
+                base_id: selectedBase,
                 items: items,
                 observacoes,
                 criado_por: user.id
@@ -211,41 +255,119 @@ export default function TeamDeliveryModal({ isOpen, onClose, onSuccess }: TeamDe
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                    {/* Base Selection */}
+                    <div className="p-6 bg-blue-50 rounded-2xl border border-blue-100">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Base *</label>
+                        <select
+                            value={selectedBase}
+                            onChange={e => setSelectedBase(e.target.value)}
+                            className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none bg-white text-sm"
+                        >
+                            <option value="">Selecione a base</option>
+                            {bases.map(b => (
+                                <option key={b.id} value={b.id}>{b.nome}</option>
+                            ))}
+                        </select>
+                        {bases.length === 1 && (
+                            <p className="text-xs text-blue-600 mt-2">Base selecionada automaticamente (acesso único)</p>
+                        )}
+                    </div>
+
                     {/* Team & Responsible Selection */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 bg-gray-50 rounded-2xl border border-gray-100">
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Equipe</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Equipe *</label>
                             <div className="relative">
-                                <Users className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                                <select
-                                    value={selectedTeam}
-                                    onChange={e => setSelectedTeam(e.target.value)}
-                                    className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-100 outline-none bg-white appearance-none"
-                                >
-                                    <option value="">Selecione uma equipe</option>
-                                    {teams.map(t => (
-                                        <option key={t.id} value={t.id}>{t.nome}</option>
-                                    ))}
-                                </select>
+                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                                <input
+                                    type="text"
+                                    value={teamSearchTerm}
+                                    onChange={e => setTeamSearchTerm(e.target.value)}
+                                    placeholder="Digite para buscar equipe..."
+                                    className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none bg-white text-sm"
+                                />
+                                {teamSearchTerm && (
+                                    <X 
+                                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 cursor-pointer hover:text-gray-600" 
+                                        onClick={() => setTeamSearchTerm('')}
+                                    />
+                                )}
                             </div>
+                            {teamSearchTerm && filteredTeams.length > 0 && (
+                                <div className="mt-2 max-h-48 overflow-y-auto border border-gray-200 rounded-xl bg-white shadow-lg">
+                                    {filteredTeams.map(team => (
+                                        <button
+                                            key={team.id}
+                                            onClick={() => {
+                                                setSelectedTeam(team.id);
+                                                setTeamSearchTerm('');
+                                            }}
+                                            className={`w-full text-left px-4 py-3 hover:bg-blue-50 border-b last:border-b-0 transition-colors ${
+                                                selectedTeam === team.id ? 'bg-blue-50 border-blue-200' : ''
+                                            }`}
+                                        >
+                                            <div className="font-medium text-sm">{team.nome}</div>
+                                            <div className="text-xs text-gray-500">{team.operacao || 'Operação'}</div>
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                            {selectedTeam && !teamSearchTerm && (
+                                <div className="mt-2 flex items-center gap-2 p-3 bg-blue-50 border border-blue-200 rounded-xl">
+                                    <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                                    <div className="text-sm text-blue-700">
+                                        <strong>Selecionado:</strong> {teams.find(t => t.id === selectedTeam)?.nome}
+                                    </div>
+                                </div>
+                            )}
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Responsável Recebimento</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Responsável Recebimento *</label>
                             <div className="relative">
-                                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                                <select
-                                    value={selectedMember}
-                                    onChange={e => setSelectedMember(e.target.value)}
+                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                                <input
+                                    type="text"
+                                    value={memberSearchTerm}
+                                    onChange={e => setMemberSearchTerm(e.target.value)}
+                                    placeholder="Digite para buscar responsável..."
                                     disabled={!selectedTeam}
-                                    className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-100 outline-none bg-white appearance-none disabled:bg-gray-100 disabled:text-gray-400"
-                                >
-                                    <option value="">Selecione o responsável</option>
-                                    {members.map(m => (
-                                        <option key={m.id} value={m.id}>{m.nome}</option>
-                                    ))}
-                                </select>
+                                    className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none bg-white disabled:bg-gray-100 disabled:text-gray-400 text-sm"
+                                />
+                                {memberSearchTerm && (
+                                    <X 
+                                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 cursor-pointer hover:text-gray-600" 
+                                        onClick={() => setMemberSearchTerm('')}
+                                    />
+                                )}
                             </div>
+                            {memberSearchTerm && filteredMembers.length > 0 && (
+                                <div className="mt-2 max-h-48 overflow-y-auto border border-gray-200 rounded-xl bg-white shadow-lg">
+                                    {filteredMembers.map(member => (
+                                        <button
+                                            key={member.id}
+                                            onClick={() => {
+                                                setSelectedMember(member.id);
+                                                setMemberSearchTerm('');
+                                            }}
+                                            className={`w-full text-left px-4 py-3 hover:bg-blue-50 border-b last:border-b-0 transition-colors ${
+                                                selectedMember === member.id ? 'bg-blue-50 border-blue-200' : ''
+                                            }`}
+                                        >
+                                            <div className="font-medium text-sm">{member.nome}</div>
+                                            <div className="text-xs text-gray-500">Mat. {member.matricula || 'N/A'}</div>
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                            {selectedMember && !memberSearchTerm && (
+                                <div className="mt-2 flex items-center gap-2 p-3 bg-blue-50 border border-blue-200 rounded-xl">
+                                    <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                                    <div className="text-sm text-blue-700">
+                                        <strong>Selecionado:</strong> {members.find(m => m.id === selectedMember)?.nome}
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
 
@@ -311,16 +433,16 @@ export default function TeamDeliveryModal({ isOpen, onClose, onSuccess }: TeamDe
                                         autoFocus
                                     />
                                     {itemSearchResults.length > 0 && (
-                                        <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-xl border border-gray-100 max-h-60 overflow-y-auto z-10">
+                                        <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-xl border border-gray-200 max-h-80 overflow-y-auto z-10">
                                             {itemSearchResults.map(item => (
                                                 <button
                                                     key={item.id}
                                                     onClick={() => handleAddItem(item)}
-                                                    className="w-full text-left px-4 py-3 hover:bg-gray-50 flex items-center justify-between group"
+                                                    className="w-full text-left px-4 py-4 hover:bg-blue-50 flex items-center justify-between group border-b last:border-b-0"
                                                 >
                                                     <div>
-                                                        <div className="font-medium text-gray-900">{item.nome}</div>
-                                                        <div className="text-xs text-gray-500">{item.codigo}</div>
+                                                        <div className="font-medium text-sm break-words">{item.nome}</div>
+                                                        <div className="text-xs text-gray-500 mt-1">{item.codigo}</div>
                                                     </div>
                                                     <Plus className="w-4 h-4 text-blue-600 opacity-0 group-hover:opacity-100" />
                                                 </button>
@@ -390,7 +512,7 @@ export default function TeamDeliveryModal({ isOpen, onClose, onSuccess }: TeamDe
                     </button>
                     <button
                         onClick={handleSubmit}
-                        disabled={loading || items.length === 0 || !selectedTeam || !selectedMember}
+                        disabled={loading || items.length === 0 || !selectedTeam || !selectedMember || !selectedBase}
                         className="px-8 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-200 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         {loading ? 'Processando...' : 'Confirmar Entrega'}

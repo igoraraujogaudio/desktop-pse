@@ -1,6 +1,25 @@
 use serde::{Deserialize, Serialize};
+use std::fs::OpenOptions;
+use std::io::Write;
 
 use crate::biometric_sdk;
+
+fn log_biometric(message: &str) {
+    let mut log_dir = std::env::var("PROGRAMDATA")
+        .map(|p| std::path::PathBuf::from(p).join("AlmoxarifadoDesktop"))
+        .unwrap_or_else(|_| std::env::temp_dir().join("AlmoxarifadoDesktop"));
+
+    if let Err(e) = std::fs::create_dir_all(&log_dir) {
+        log::warn!("Falha ao criar diretório de log biométrico: {}", e);
+        return;
+    }
+
+    log_dir.push("biometria.log");
+
+    if let Ok(mut file) = OpenOptions::new().create(true).append(true).open(&log_dir) {
+        let _ = writeln!(file, "[{}] {}", chrono::Local::now().to_rfc3339(), message);
+    }
+}
 
 #[derive(Deserialize)]
 #[allow(dead_code)]
@@ -27,17 +46,42 @@ pub struct BiometricValidationResult {
 /// - Se não tiver nenhum, captura e cadastra
 /// - Se tiver, captura e compara via SDK
 /// - Exige `min_percent` (ex.: 90) de similaridade mínima
+/// - ASYNC para não bloquear a UI durante a captura
 #[tauri::command]
-pub fn validate_or_enroll_fingerprint(
+pub async fn validate_or_enroll_fingerprint(
     app: tauri::AppHandle,
     user_id: String,
     min_percent: i32,
     finger_id: Option<String>,
+    supabase_url: String,
+    service_key: String,
 ) -> Result<BiometricValidationResult, String> {
+    // Executar todo o processamento bloqueante em uma thread separada
+    tokio::task::spawn_blocking(move || {
+        validate_or_enroll_fingerprint_blocking(app, user_id, min_percent, finger_id, supabase_url, service_key)
+    })
+    .await
+    .map_err(|e| format!("Erro ao executar tarefa biométrica: {}", e))?
+}
+
+/// Função bloqueante interna que executa a validação/cadastro biométrico
+fn validate_or_enroll_fingerprint_blocking(
+    app: tauri::AppHandle,
+    user_id: String,
+    min_percent: i32,
+    finger_id: Option<String>,
+    supabase_url: String,
+    service_key: String,
+) -> Result<BiometricValidationResult, String> {
+    log_biometric(&format!(
+        "validate_or_enroll_fingerprint() user_id={} min_percent={} enrolled_finger={:?}",
+        user_id, min_percent, finger_id
+    ));
     // 1) inicializar SDK (porta opcional via env, ex.: "COM3")
     // Se falhar, tentar reinicializar (útil quando o sensor é reconectado)
     let port = std::env::var("IDBIO_PORT").ok();
     if let Err(e) = biometric_sdk::init_sdk(port.as_deref()) {
+        log_biometric(&format!("init_sdk() error: {}", e));
         log::warn!("Falha na inicialização do SDK: {}. Tentando reinicializar...", e);
         
         // Tentar terminar e reinicializar
@@ -48,10 +92,9 @@ pub fn validate_or_enroll_fingerprint(
         biometric_sdk::init_sdk(port.as_deref())?;
     }
 
-    let supabase_url = std::env::var("SUPABASE_URL")
-        .map_err(|e| format!("SUPABASE_URL não configurada: {e}"))?;
-    let service_key = std::env::var("SUPABASE_SERVICE_ROLE_KEY")
-        .map_err(|e| format!("SUPABASE_SERVICE_ROLE_KEY não configurada: {e}"))?;
+    log_biometric("SDK inicializado com sucesso");
+    log_biometric(&format!("SUPABASE_URL recebido: {}...", &supabase_url.chars().take(20).collect::<String>()));
+    log_biometric("SERVICE_KEY recebido do frontend");
 
     // 2) buscar templates do usuário no Supabase (REST direto, sincrono via reqwest blocking)
     let client = reqwest::blocking::Client::builder()
@@ -67,19 +110,30 @@ pub fn validate_or_enroll_fingerprint(
             h
         })
         .build()
-        .map_err(|e| format!("Erro ao criar client HTTP: {e}"))?;
+        .map_err(|e| {
+            let msg = format!("Erro ao criar client HTTP: {e}");
+            log_biometric(&msg);
+            msg
+        })?;
 
     let list_url = format!(
         "{}/rest/v1/biometric_templates?user_id=eq.{}&select=id,template,quality",
         supabase_url, user_id
     );
 
+    log_biometric(&format!("HTTP GET templates: {}", list_url));
+
     let resp = client
         .get(&list_url)
         .send()
-        .map_err(|e| format!("Erro HTTP ao buscar templates: {e}"))?;
+        .map_err(|e| {
+            let msg = format!("Erro HTTP ao buscar templates: {e}");
+            log_biometric(&msg);
+            msg
+        })?;
 
     if !resp.status().is_success() {
+        log_biometric(&format!("HTTP templates failed status: {}", resp.status()));
         return Err(format!(
             "Falha ao buscar templates (status {}): {:?}",
             resp.status(),
@@ -89,11 +143,18 @@ pub fn validate_or_enroll_fingerprint(
 
     let templates: Vec<RemoteTemplate> = resp
         .json()
-        .map_err(|e| format!("Erro ao parsear templates: {e}"))?;
+        .map_err(|e| {
+            let msg = format!("Erro ao parsear templates: {e}");
+            log_biometric(&msg);
+            msg
+        })?;
+
+    log_biometric(&format!("Templates encontrados: {}", templates.len()));
 
     // 3) se não tiver template -> capturar e cadastrar (ENROLLMENT ROBUSTO)
     if templates.is_empty() {
         use tauri::Emitter;
+        log_biometric("Nenhum template encontrado. Iniciando cadastro.");
         
         let mut best_template = String::new();
         let mut best_quality = -1;
@@ -110,6 +171,7 @@ pub fn validate_or_enroll_fingerprint(
             let (tmpl, quality) = match biometric_sdk::capture_with_sdk() {
                 Ok(res) => res,
                 Err(e) => {
+                    log_biometric(&format!("Erro na captura {}: {}", i, e));
                     let _ = app.emit("biometric-instruction", format!("Erro na captura {}: {}", i, e));
                     return Err(e);
                 }
@@ -134,6 +196,7 @@ pub fn validate_or_enroll_fingerprint(
 
         // Validar qualidade mínima (90% exigido)
         if best_quality < 90 {
+            log_biometric(&format!("Qualidade insuficiente: {}", best_quality));
             return Ok(BiometricValidationResult {
                 success: false,
                 reason: format!("Qualidade insuficiente (Melhor: {}%). Tente novamente com mais precisão.", best_quality),
@@ -155,13 +218,20 @@ pub fn validate_or_enroll_fingerprint(
             "finger": finger_id.unwrap_or_else(|| "right_index".to_string())
         });
 
+        log_biometric("HTTP POST register template");
+
         let resp = client
             .post(&register_url)
             .json(&body)
             .send()
-            .map_err(|e| format!("Erro HTTP ao registrar template: {e}"))?;
+            .map_err(|e| {
+                let msg = format!("Erro HTTP ao registrar template: {e}");
+                log_biometric(&msg);
+                msg
+            })?;
 
         if !resp.status().is_success() {
+            log_biometric(&format!("HTTP register failed status: {}", resp.status()));
             return Err(format!(
                 "Falha ao registrar template (status {}): {:?}",
                 resp.status(),
@@ -180,13 +250,23 @@ pub fn validate_or_enroll_fingerprint(
     }
 
     // 4) se já tem templates -> capturar e comparar
-    let (live_template, live_quality) = biometric_sdk::capture_with_sdk()?;
+    log_biometric("Template encontrado. Iniciando captura para validação.");
+    let (live_template, live_quality) = biometric_sdk::capture_with_sdk().map_err(|e| {
+        log_biometric(&format!("Erro na captura para validação: {}", e));
+        e
+    })?;
+
+    log_biometric(&format!("Captura OK. quality={}", live_quality));
 
     let mut best_raw = 0;
     let mut best_percent = 0;
 
     for t in &templates {
-        let (raw, percent) = biometric_sdk::compare_templates_with_sdk(&t.template, &live_template)?;
+        let (raw, percent) = biometric_sdk::compare_templates_with_sdk(&t.template, &live_template)
+            .map_err(|e| {
+                log_biometric(&format!("Erro no compare_templates_with_sdk: {}", e));
+                e
+            })?;
         if percent > best_percent {
             best_percent = percent;
             best_raw = raw;
@@ -194,6 +274,7 @@ pub fn validate_or_enroll_fingerprint(
     }
 
     if best_percent < min_percent {
+        log_biometric(&format!("Score abaixo do mínimo: {} < {}", best_percent, min_percent));
         return Ok(BiometricValidationResult {
             success: false,
             reason: format!(
@@ -207,6 +288,7 @@ pub fn validate_or_enroll_fingerprint(
         });
     }
 
+    log_biometric(&format!("Biometria validada. score={} percent={}", best_raw, best_percent));
     Ok(BiometricValidationResult {
         success: true,
         reason: "Biometria validada com sucesso.".into(),

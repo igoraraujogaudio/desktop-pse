@@ -4,8 +4,14 @@
 mod biometric_sdk;
 mod biometric_service;
 mod sdk_manager;
+mod cleanup;
 
 use tauri::{AppHandle, Manager};
+
+#[tauri::command]
+fn cleanup_app_data() -> Result<(), String> {
+    cleanup::cleanup_app_data()
+}
 
 /// Comando para executar o instalador do driver do leitor biométrico
 #[tauri::command]
@@ -154,6 +160,7 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             biometric_service::validate_or_enroll_fingerprint,
             install_biometric_driver,
+            cleanup_app_data,
             sdk_manager::check_sdk_status,
             sdk_manager::sync_sdk_files,
             biometric_sdk::initialize_biometric_sdk,
@@ -162,15 +169,17 @@ fn main() {
             biometric_sdk::list_com_ports
         ])
         .setup(|app| {
-            // Verificar status do SDK na inicialização
+            // Copiar DLL para a raiz na primeira execução
             let status = sdk_manager::get_sdk_status(Some(&app.handle()));
             
             if !status.dll_found {
-                log::warn!("DLL do SDK não encontrada. Tentando sincronizar...");
+                log::warn!("DLL do SDK não encontrada. Copiando para a raiz...");
                 match sdk_manager::sync_sdk_dll(&app.handle()) {
-                    Ok(path) => log::info!("SDK sincronizado com sucesso: {:?}", path),
-                    Err(e) => log::error!("Erro ao sincronizar SDK: {}", e),
+                    Ok(path) => log::info!("DLL copiada com sucesso para: {:?}", path),
+                    Err(e) => log::error!("Erro ao copiar DLL: {}", e),
                 }
+            } else {
+                log::info!("DLL do SDK já está presente: {:?}", status.dll_path);
             }
             
             if !status.driver_installed {
@@ -232,6 +241,12 @@ fn main() {
             }
 
             Ok(())
+        })
+        .on_window_event(|_window, event| {
+            if let tauri::WindowEvent::CloseRequested { .. } = event {
+                // Executar cleanup ao fechar
+                let _ = cleanup::cleanup_app_data();
+            }
         })
         .build(tauri::generate_context!())
         .expect("error while running tauri application")

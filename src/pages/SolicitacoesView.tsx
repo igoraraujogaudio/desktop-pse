@@ -12,6 +12,7 @@ import { SolicitacaoCard } from '../components/SolicitacaoCard';
 import { SolicitacaoDetailsPage } from './SolicitacaoDetailsPage';
 import TeamDeliveryModal from '../components/TeamDeliveryModal';
 import EmergencyModal from '../components/EmergencyModal';
+import EmployeeDeliveryModal from '../components/EmployeeDeliveryModal';
 
 interface SolicitacoesViewProps {
     onEntregar: (solicitacao: SolicitacaoItem) => void;
@@ -57,7 +58,7 @@ export default function SolicitacoesView({ onEntregar, selectedSolicitacao, isDe
 
     // Modal states
     const [emergencyModalOpen, setEmergencyModalOpen] = useState(false);
-    const [_employeeModalOpen, setEmployeeModalOpen] = useState(false);
+    const [employeeModalOpen, setEmployeeModalOpen] = useState(false);
     const [teamModalOpen, setTeamModalOpen] = useState(false);
 
     // Permissions for buttons
@@ -598,15 +599,27 @@ export default function SolicitacoesView({ onEntregar, selectedSolicitacao, isDe
             />
 
             {user && (
-                <EmergencyModal
-                    isOpen={emergencyModalOpen}
-                    onClose={() => setEmergencyModalOpen(false)}
-                    onSuccess={() => {
-                        loadSolicitacoes();
-                        loadStatusCounts();
-                    }}
-                    userId={user.id}
-                />
+                <>
+                    <EmergencyModal
+                        isOpen={emergencyModalOpen}
+                        onClose={() => setEmergencyModalOpen(false)}
+                        onSuccess={() => {
+                            loadSolicitacoes();
+                            loadStatusCounts();
+                        }}
+                        userId={user.id}
+                    />
+                    
+                    <EmployeeDeliveryModal
+                        isOpen={employeeModalOpen}
+                        onClose={() => setEmployeeModalOpen(false)}
+                        onSuccess={() => {
+                            loadSolicitacoes();
+                            loadStatusCounts();
+                        }}
+                        userId={user.id}
+                    />
+                </>
             )}
         </div>
     );

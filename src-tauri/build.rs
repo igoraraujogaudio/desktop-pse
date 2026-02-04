@@ -1,8 +1,9 @@
 fn main() {
     tauri_build::build();
 
-    // Copiar libcidbio.dll do exemplo C# (que funciona) para o diretório de build
-    // IMPORTANTE: A DLL do exemplo C# é diferente e funciona corretamente
+    // Copiar libcidbio.dll do exemplo C# para o diretório de build
+    // IMPORTANTE: Usar versão do exemplo C# que inclui todas as dependências necessárias
+    // A versão em lib/C_C++/win64 NÃO funciona em produção (falta dependências)
     let sdk_dir = std::path::Path::new("../IDBIO_SDK/example/C#/bin");
     let sdk_dll_path = sdk_dir.join("libcidbio.dll");
     

@@ -421,6 +421,8 @@ export default function AlmoxarifeView({ onLogout }: AlmoxarifeViewProps) {
         userId: userId,
         minPercent: 90,
         fingerId: biometricModal.isEnrolled ? undefined : biometricModal.selectedFinger,
+        supabaseUrl: import.meta.env.VITE_SUPABASE_URL,
+        serviceKey: import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY,
       });
 
       unlisten(); // Stop listening

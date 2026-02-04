@@ -60,7 +60,7 @@ export function SolicitacaoCard({
                             <div>
                                 <div className="text-[10px] font-bold uppercase tracking-wider opacity-90 mb-1">DESTINATÁRIO</div>
                                 <div className="bg-blue-800 text-white font-bold text-xs px-2 py-1.5 rounded-md shadow-md border-2 border-blue-900 truncate">
-                                    👤 {item.destinatario?.nome || 'N/A'}
+                                    � {item.destinatario?.nome || 'N/A'}
                                 </div>
                             </div>
 
