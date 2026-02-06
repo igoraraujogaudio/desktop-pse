@@ -8,6 +8,7 @@
       "endpoints": [
         "https://raw.githubusercontent.com/igoraraujogaudio/desktop-pse/master/latest.json"
       ],
+      "pubkey": "",
       "windows": {
         "installMode": "passive"
       }
