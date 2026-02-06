@@ -15,6 +15,19 @@ export default function UpdateChecker() {
         setError(null);
         try {
             console.log('📡 [UPDATER-FRONTEND] Chamando API check()...');
+            
+            // Tentar fazer fetch manual para debug
+            try {
+                const response = await fetch('https://raw.githubusercontent.com/igoraraujogaudio/desktop-pse/master/latest.json');
+                const text = await response.text();
+                console.log('🔍 [DEBUG] Fetch manual - Status:', response.status);
+                console.log('🔍 [DEBUG] Fetch manual - Content-Type:', response.headers.get('content-type'));
+                console.log('🔍 [DEBUG] Fetch manual - Body length:', text.length);
+                console.log('🔍 [DEBUG] Fetch manual - Body:', text.substring(0, 200));
+            } catch (debugError) {
+                console.error('❌ [DEBUG] Erro no fetch manual:', debugError);
+            }
+            
             const updateResult = await check();
             console.log('📦 [UPDATER-FRONTEND] Resultado:', updateResult);
             
@@ -32,6 +45,7 @@ export default function UpdateChecker() {
             }
         } catch (e) {
             console.error('❌ [UPDATER-FRONTEND] Erro na verificação:', e);
+            console.error('❌ [UPDATER-FRONTEND] Erro completo:', JSON.stringify(e, Object.getOwnPropertyNames(e)));
             setStatus('error');
             setError(`Erro ao verificar atualizações: ${e}`);
         }
@@ -40,33 +54,44 @@ export default function UpdateChecker() {
     const installUpdate = async () => {
         if (!update) return;
         console.log('⬇️ [UPDATER-FRONTEND] Iniciando download da atualização');
+        console.log('📦 [UPDATER-FRONTEND] Update object:', update);
         setStatus('downloading');
         try {
             console.log('📥 [UPDATER-FRONTEND] Chamando downloadAndInstall...');
+            let lastProgress = 0;
             await update.downloadAndInstall((event: any) => {
-                console.log('📊 [UPDATER-FRONTEND] Evento do download:', event);
+                console.log('📊 [UPDATER-FRONTEND] Evento completo:', JSON.stringify(event));
                 switch (event.event) {
                     case 'Started':
                         console.log('🚀 [UPDATER-FRONTEND] Download iniciado');
+                        console.log('🔍 [UPDATER-FRONTEND] Event data:', event.data);
                         setProgress(0);
                         break;
                     case 'Progress':
                         if (event.data.contentLength) {
                             const progress = (event.data.chunkLength / event.data.contentLength) * 100;
-                            console.log(`📈 [UPDATER-FRONTEND] Progresso: ${progress.toFixed(2)}%`);
+                            if (progress !== lastProgress) {
+                                console.log(`📈 [UPDATER-FRONTEND] Progresso: ${progress.toFixed(2)}% (${event.data.chunkLength}/${event.data.contentLength} bytes)`);
+                                lastProgress = progress;
+                            }
                             setProgress(progress);
                         }
                         break;
                     case 'Finished':
-                        console.log('✅ [UPDATER-FRONTEND] Download concluído');
+                        console.log('✅ [UPDATER-FRONTEND] Download concluído - iniciando instalação');
+                        console.log('🔍 [UPDATER-FRONTEND] Finished event data:', event.data);
                         setProgress(100);
                         break;
+                    default:
+                        console.log(`⚠️ [UPDATER-FRONTEND] Evento desconhecido: ${event.event}`, event);
                 }
             });
             console.log('🎉 [UPDATER-FRONTEND] Atualização instalada com sucesso');
             setStatus('installed');
         } catch (e) {
             console.error('❌ [UPDATER-FRONTEND] Erro na instalação:', e);
+            console.error('❌ [UPDATER-FRONTEND] Erro completo:', JSON.stringify(e, Object.getOwnPropertyNames(e)));
+            console.error('❌ [UPDATER-FRONTEND] Stack trace:', (e as Error).stack);
             setStatus('error');
             setError(`Erro ao instalar atualização: ${e}`);
         }

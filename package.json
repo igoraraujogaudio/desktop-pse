@@ -1,6 +1,6 @@
 {
   "name": "almoxarifado-desktop",
-  "version": "1.0.7",
+  "version": "1.0.6",
   "description": "Aplicativo Desktop para Entrega de Almoxarifado - PSE",
   "type": "module",
   "scripts": {
