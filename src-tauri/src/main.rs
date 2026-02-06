@@ -13,6 +13,41 @@ fn cleanup_app_data() -> Result<(), String> {
     cleanup::cleanup_app_data()
 }
 
+#[tauri::command]
+async fn check_updates_manual(app: tauri::AppHandle) -> Result<String, String> {
+    use tauri_plugin_updater::UpdaterExt;
+    
+    log::info!("🔍 [UPDATER-MANUAL] Iniciando verificação manual de atualizações");
+    
+    match app.updater() {
+        Ok(updater) => {
+            log::info!("✅ [UPDATER-MANUAL] Updater obtido");
+            
+            match updater.check().await {
+                Ok(Some(update)) => {
+                    log::info!("📦 [UPDATER-MANUAL] Atualização disponível");
+                    log::info!("📝 [UPDATER-MANUAL] Notas: {:?}", update.body);
+                    log::info!("📅 [UPDATER-MANUAL] Data: {:?}", update.date);
+                    
+                    Ok(format!("Atualização encontrada. Notas: {:?}", update.body))
+                }
+                Ok(None) => {
+                    log::info!("✅ [UPDATER-MANUAL] Nenhuma atualização disponível");
+                    Ok("Nenhuma atualização disponível".to_string())
+                }
+                Err(e) => {
+                    log::error!("❌ [UPDATER-MANUAL] Erro ao verificar: {}", e);
+                    Err(format!("Erro ao verificar atualizações: {}", e))
+                }
+            }
+        }
+        Err(e) => {
+            log::error!("❌ [UPDATER-MANUAL] Erro ao obter updater: {}", e);
+            Err(format!("Erro ao obter updater: {}", e))
+        }
+    }
+}
+
 /// Comando para executar o instalador do driver do leitor biométrico
 #[tauri::command]
 fn install_biometric_driver(app: AppHandle) -> Result<(), String> {
@@ -161,6 +196,7 @@ fn main() {
             biometric_service::validate_or_enroll_fingerprint,
             install_biometric_driver,
             cleanup_app_data,
+            check_updates_manual,
             sdk_manager::check_sdk_status,
             sdk_manager::sync_sdk_files,
             biometric_sdk::initialize_biometric_sdk,
@@ -169,6 +205,41 @@ fn main() {
             biometric_sdk::list_com_ports
         ])
         .setup(|app| {
+            // Adicionar logs para o updater
+            log::info!("🔄 [UPDATER] Inicializando sistema de atualização");
+            
+            // Configurar listener para eventos do updater
+            let app_handle = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                use tauri_plugin_updater::UpdaterExt;
+                
+                log::info!("🔍 [UPDATER] Verificando atualizações...");
+                
+                match app_handle.updater() {
+                    Ok(updater) => {
+                        log::info!("✅ [UPDATER] Updater obtido com sucesso");
+                        
+                        match updater.check().await {
+                            Ok(Some(update)) => {
+                                log::info!("📦 [UPDATER] Atualização encontrada");
+                                log::info!("📝 [UPDATER] Notas: {:?}", update.body);
+                                log::info!("📅 [UPDATER] Data: {:?}", update.date);
+                                log::info!("✅ [UPDATER] Atualização disponível para download via interface");
+                            }
+                            Ok(None) => {
+                                log::info!("ℹ️ [UPDATER] Nenhuma atualização disponível");
+                            }
+                            Err(e) => {
+                                log::warn!("⚠️ [UPDATER] Erro ao verificar atualizações: {}", e);
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        log::error!("❌ [UPDATER] Erro ao obter updater: {}", e);
+                    }
+                }
+            });
+            
             // Copiar DLL para a raiz na primeira execução
             let status = sdk_manager::get_sdk_status(Some(&app.handle()));
             

@@ -10,48 +10,65 @@ export default function UpdateChecker() {
     const [progress, setProgress] = useState<number>(0);
 
     const checkUpdate = async () => {
+        console.log('🔍 [UPDATER-FRONTEND] Iniciando verificação de atualizações');
         setStatus('checking');
         setError(null);
         try {
+            console.log('📡 [UPDATER-FRONTEND] Chamando API check()...');
             const updateResult = await check();
+            console.log('📦 [UPDATER-FRONTEND] Resultado:', updateResult);
+            
             if (updateResult?.available) {
+                console.log('✅ [UPDATER-FRONTEND] Atualização disponível:', {
+                    version: updateResult.version,
+                    body: updateResult.body,
+                    date: updateResult.date
+                });
                 setUpdate(updateResult);
                 setStatus('available');
             } else {
+                console.log('ℹ️ [UPDATER-FRONTEND] Nenhuma atualização disponível');
                 setStatus('idle');
-                // Optional: Show "No update available" toast
             }
         } catch (e) {
-            console.error(e);
+            console.error('❌ [UPDATER-FRONTEND] Erro na verificação:', e);
             setStatus('error');
-            setError('Erro ao verificar atualizações');
+            setError(`Erro ao verificar atualizações: ${e}`);
         }
     };
 
     const installUpdate = async () => {
         if (!update) return;
+        console.log('⬇️ [UPDATER-FRONTEND] Iniciando download da atualização');
         setStatus('downloading');
         try {
+            console.log('📥 [UPDATER-FRONTEND] Chamando downloadAndInstall...');
             await update.downloadAndInstall((event: any) => {
+                console.log('📊 [UPDATER-FRONTEND] Evento do download:', event);
                 switch (event.event) {
                     case 'Started':
+                        console.log('🚀 [UPDATER-FRONTEND] Download iniciado');
                         setProgress(0);
                         break;
                     case 'Progress':
                         if (event.data.contentLength) {
-                            setProgress((event.data.chunkLength / event.data.contentLength) * 100);
+                            const progress = (event.data.chunkLength / event.data.contentLength) * 100;
+                            console.log(`📈 [UPDATER-FRONTEND] Progresso: ${progress.toFixed(2)}%`);
+                            setProgress(progress);
                         }
                         break;
                     case 'Finished':
+                        console.log('✅ [UPDATER-FRONTEND] Download concluído');
                         setProgress(100);
                         break;
                 }
             });
+            console.log('🎉 [UPDATER-FRONTEND] Atualização instalada com sucesso');
             setStatus('installed');
         } catch (e) {
-            console.error(e);
+            console.error('❌ [UPDATER-FRONTEND] Erro na instalação:', e);
             setStatus('error');
-            setError('Erro ao instalar atualização');
+            setError(`Erro ao instalar atualização: ${e}`);
         }
     };
 
