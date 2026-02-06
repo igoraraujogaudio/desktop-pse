@@ -70,10 +70,9 @@ export function useUnifiedPermissions() {
     }, [userContratos]);
 
     const hasBaseAccess = useCallback((baseId: string): boolean => {
-        // Same for base
-        if (['admin', 'diretor'].includes(user?.nivel_acesso || '')) return true;
+        // Verificar acesso apenas via usuario_bases (permissões modulares)
         return userBases.some(ub => ub.base_id === baseId && ub.ativo);
-    }, [userBases, user]);
+    }, [userBases]);
 
     const getBaseAccessType = useCallback((baseId: string): 'total' | 'restrito' | 'leitura' | null => {
         const baseAccess = userBases.find(ub => ub.base_id === baseId && ub.ativo);

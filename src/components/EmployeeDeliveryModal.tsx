@@ -5,6 +5,7 @@ import { baseService } from '../services/baseService';
 import { catalogoService } from '../services/catalogoService';
 import { estoqueService } from '../services/estoqueService';
 import { moduloPredefinidoService } from '../services/moduloPredefinidoService';
+import { useUnifiedPermissions } from '../hooks/useUnifiedPermissions';
 import type { User } from '../types';
 
 interface Base {
@@ -55,6 +56,7 @@ interface ItemIndividual {
 
 
 export default function EmployeeDeliveryModal({ isOpen, onClose, onSuccess, userId }: EmployeeDeliveryModalProps) {
+    const { userBases } = useUnifiedPermissions();
     const [submitting, setSubmitting] = useState(false);
 
     // Data States
@@ -100,7 +102,13 @@ export default function EmployeeDeliveryModal({ isOpen, onClose, onSuccess, user
             ]);
 
             setFuncionarios(funcionariosData);
-            setBases(basesData);
+            
+            // Filtrar bases por acesso do usuário via usuario_bases
+            const basesComAcesso = basesData.filter(base => 
+                userBases.some(ub => ub.base_id === base.id && ub.ativo)
+            );
+            
+            setBases(basesComAcesso);
             setModulosPredefinidos(modulosData);
         } catch (error) {
             console.error('Error loading data:', error);

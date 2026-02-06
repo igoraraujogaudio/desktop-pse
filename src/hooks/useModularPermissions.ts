@@ -18,7 +18,7 @@ export const PERMISSION_CODES = {
     ALMOXARIFADO: {
         DASHBOARD_COMPLETO: 'almoxarifado.site.dashboard_completo',
         // ... (many codes, I will include the critical ones for this task + general ones)
-        SOLICITAR_ITEM: 'almoxarifado.mobile.solicitar_item', // Web uses site.* but page.tsx used mobile.* codes for some reason? 
+        SOLICITAR_ITEM: 'almoxarifado.mobile.solicitar_material', // Web uses site.* but page.tsx used mobile.* codes for some reason? 
         // Wait, page.tsx used PERMISSION_CODES.ALMOXARIFADO.SOLICITAR_ITEM. 
         // In the file I read, SOLICITAR_ITEM was 'almoxarifado.mobile.solicitar_item'.
         // And page.tsx is protected by it.

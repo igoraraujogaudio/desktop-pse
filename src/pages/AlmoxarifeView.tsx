@@ -23,8 +23,11 @@ import TransferenciasPage from "./TransferenciasPage";
 import EmprestimosTerceirosPage from "./EmprestimosTerceirosPage";
 import { TrocaModal, DadosTroca } from '../components/TrocaModal';
 import { PDFViewerModal } from '../components/PDFViewerModal';
+import DeliveryValidationModal from '../components/DeliveryValidationModal';
 import UpdateChecker from "../components/UpdateChecker";
 import { useAuth } from "../hooks/useAuth";
+import { useOffline } from "../hooks/useOffline";
+import { CacheIndicator } from "../components/CacheIndicator";
 
 interface AlmoxarifeViewProps {
   onLogout: () => void;
@@ -32,6 +35,7 @@ interface AlmoxarifeViewProps {
 
 export default function AlmoxarifeView({ onLogout }: AlmoxarifeViewProps) {
   const { user } = useAuth();
+  const { isOnline, isSyncing, syncQueueCount, deliverSolicitacao: deliverOffline } = useOffline();
   const [activeTab, setActiveTab] = useState<'solicitacoes' | 'modulos' | 'inventarios' | 'ordens-desconto' | 'entrada-material' | 'devolucoes' | 'transferencias' | 'emprestimos-terceiros'>('solicitacoes');
   const [inventarioSubPage, setInventarioSubPage] = useState<'hub' | 'equipes' | 'funcionarios' | 'detalhes' | 'detalhes-equipe'>('hub');
   const [selectedFuncionario, setSelectedFuncionario] = useState<{ id: string; nome: string } | null>(null);
@@ -68,6 +72,7 @@ export default function AlmoxarifeView({ onLogout }: AlmoxarifeViewProps) {
     processing: boolean;
     validationResult?: 'success' | 'failure' | null;
     validationMessage?: string;
+    fingerprintImage?: string;
   }>({
     open: false,
     userId: '',
@@ -78,7 +83,8 @@ export default function AlmoxarifeView({ onLogout }: AlmoxarifeViewProps) {
     message: '',
     processing: false,
     validationResult: null,
-    validationMessage: ''
+    validationMessage: '',
+    fingerprintImage: undefined
   });
 
   // TROCA MODAL STATE
@@ -90,6 +96,17 @@ export default function AlmoxarifeView({ onLogout }: AlmoxarifeViewProps) {
     open: false,
     solicitacao: null,
     inventoryItem: null
+  });
+
+  // DELIVERY VALIDATION MODAL STATE
+  const [deliveryValidationModal, setDeliveryValidationModal] = useState<{
+    open: boolean;
+    solicitacao: SolicitacaoItem | null;
+    skipChecks: boolean;
+  }>({
+    open: false,
+    solicitacao: null,
+    skipChecks: false
   });
 
   useEffect(() => {
@@ -243,7 +260,6 @@ export default function AlmoxarifeView({ onLogout }: AlmoxarifeViewProps) {
 
     const targetSolicitacao = solicitacaoEspecifica || selectedSolicitacao;
     const userIdToValidate = targetSolicitacao?.destinatario_id || targetSolicitacao?.responsavel_equipe_id;
-    const userNameToValidate = targetSolicitacao?.destinatario?.nome || targetSolicitacao?.responsavel_equipe?.nome || "Responsável";
 
     if (!targetSolicitacao || !userIdToValidate) {
       console.warn('⚠️ [AlmoxarifeView] Validation failed: Missing target or user', { targetSolicitacao, userIdToValidate });
@@ -280,7 +296,34 @@ export default function AlmoxarifeView({ onLogout }: AlmoxarifeViewProps) {
       }
     }
 
-    console.log('⏩ [AlmoxarifeView] Proceeding to Biometric Validation');
+    // OPEN DELIVERY VALIDATION MODAL FIRST
+    console.log('📋 [AlmoxarifeView] Opening Delivery Validation Modal');
+    setDeliveryValidationModal({
+      open: true,
+      solicitacao: targetSolicitacao,
+      skipChecks
+    });
+  };
+
+  // Continue to biometric validation after delivery validation
+  const proceedToBiometricValidation = async (solicitacao: SolicitacaoItem, deliveryData: {
+    quantidade: number;
+    numeroLaudo?: string;
+    validadeLaudo?: string;
+    observacoes?: string;
+  }) => {
+    console.log('⏩ [AlmoxarifeView] Proceeding to Biometric Validation with delivery data:', deliveryData);
+
+    const userIdToValidate = solicitacao?.destinatario_id || solicitacao?.responsavel_equipe_id;
+    const userNameToValidate = solicitacao?.destinatario?.nome || solicitacao?.responsavel_equipe?.nome || "Responsável";
+
+    if (!userIdToValidate) {
+      alert("Erro: destinatário não encontrado.");
+      return;
+    }
+
+    // Store delivery data for later use
+    (solicitacao as any)._deliveryData = deliveryData;
 
     try {
 
@@ -327,8 +370,8 @@ export default function AlmoxarifeView({ onLogout }: AlmoxarifeViewProps) {
       // FETCH INVENTORY FOR SECOND SCREEN
       let userInventory: any[] = [];
       try {
-        if (targetSolicitacao.destinatario_equipe?.id) {
-          userInventory = await estoqueService.getInventarioByEquipe(targetSolicitacao.destinatario_equipe.id);
+        if (solicitacao.destinatario_equipe?.id) {
+          userInventory = await estoqueService.getInventarioByEquipe(solicitacao.destinatario_equipe.id);
         } else if (userIdToValidate) {
           userInventory = await estoqueService.getInventarioByFuncionario(userIdToValidate);
         }
@@ -339,7 +382,7 @@ export default function AlmoxarifeView({ onLogout }: AlmoxarifeViewProps) {
       // Emit event to Employee Window
       await emitTo("employee", "update-employee-view", {
         type: 'validation-start',
-        solicitacao: targetSolicitacao,
+        solicitacao: solicitacao,
         inventory: userInventory,
         biometric: {
           isEnrolled,
@@ -355,7 +398,7 @@ export default function AlmoxarifeView({ onLogout }: AlmoxarifeViewProps) {
         isEnrolled,
         finger,
         selectedFinger: 'right_index', // Default for new opening
-        targetSolicitacao: targetSolicitacao,
+        targetSolicitacao: solicitacao,
         processing: false,
         message: ''
       });
@@ -391,28 +434,17 @@ export default function AlmoxarifeView({ onLogout }: AlmoxarifeViewProps) {
       }
     });
 
-    const getFingerName = (finger: string) => {
-      const map: Record<string, string> = {
-        'right_thumb': 'Polegar Direito',
-        'right_index': 'Indicador Direito',
-        'right_middle': 'Médio Direito',
-        'right_ring': 'Anelar Direito',
-        'right_little': 'Mínimo Direito',
-        'left_thumb': 'Polegar Esquerdo',
-        'left_index': 'Indicador Esquerdo',
-        'left_middle': 'Médio Esquerdo',
-        'left_ring': 'Anelar Esquerdo',
-        'left_little': 'Mínimo Esquerdo'
-      };
-      return map[finger.toLowerCase()] || finger;
-    };
+    // Listen to fingerprint images
+    const unlistenImage = await listen<string>('biometric-image', (event) => {
+      setBiometricModal(prev => ({ ...prev, fingerprintImage: event.payload }));
+    });
 
-    // Explicitly send initial instruction
-    const initialMessage = biometricModal.isEnrolled
-      ? `Posicione o dedo ${biometricModal.finger || 'INDICADOR'} no leitor...`
-      : `Posicione o dedo ${getFingerName(biometricModal.selectedFinger).toUpperCase()} no leitor...`;
-
-    emitTo("employee", "biometric-instruction", initialMessage).catch(console.error);
+    
+    // Explicitly send initial instruction (only for validation, not enrollment)
+    if (biometricModal.isEnrolled) {
+      const initialMessage = `Coloque o Dedo ${biometricModal.finger || 'INDICADOR'}`;
+      emitTo("employee", "biometric-instruction", initialMessage).catch(console.error);
+    }
 
     try {
       const result = await invoke<{
@@ -431,6 +463,7 @@ export default function AlmoxarifeView({ onLogout }: AlmoxarifeViewProps) {
       });
 
       unlisten(); // Stop listening
+      unlistenImage();
 
       if (!result.success) {
         // Show failure in modal with retry option
@@ -470,6 +503,7 @@ export default function AlmoxarifeView({ onLogout }: AlmoxarifeViewProps) {
 
     } catch (error) {
       unlisten();
+      unlistenImage();
       console.error("Erro na validação biométrica:", error);
       
       // Melhorar mensagem de erro baseada no tipo de erro
@@ -503,6 +537,10 @@ export default function AlmoxarifeView({ onLogout }: AlmoxarifeViewProps) {
     try {
       setIsDelivering(true);
 
+      // Get delivery data stored during validation
+      const deliveryData = (solicitacao as any)._deliveryData || {};
+      const quantidadeEntregue = deliveryData.quantidade || solicitacao.quantidade_aprovada;
+
       // PROCESS RETURN IF PENDING
       // This is done BEFORE delivery to ensure inventory is debited first
       if (pendingReturnData && pendingReturnData.solicitacao.id === solicitacao.id) {
@@ -523,18 +561,56 @@ export default function AlmoxarifeView({ onLogout }: AlmoxarifeViewProps) {
         }
       }
 
-      // Atualizar status da solicitação
-      const { error } = await supabase
-        .from("solicitacoes_itens")
-        .update({
-          status: "entregue",
-          quantidade_entregue: solicitacao.quantidade_aprovada,
-          entregue_em: new Date().toISOString(),
-          entregue_por: user!.id
-        })
-        .eq("id", solicitacao.id);
+      // Atualizar status da solicitação com dados de entrega
+      const updates: any = {
+        status: "entregue",
+        quantidade_entregue: quantidadeEntregue,
+        entregue_em: new Date().toISOString(),
+        entregue_por: user!.id
+      };
 
-      if (error) throw error;
+      if (deliveryData.numeroLaudo) {
+        updates.numero_laudo = deliveryData.numeroLaudo;
+      }
+
+      if (deliveryData.validadeLaudo) {
+        updates.validade_laudo = deliveryData.validadeLaudo;
+      }
+
+      if (deliveryData.observacoes) {
+        updates.observacoes = deliveryData.observacoes;
+      }
+
+      // ============================================================================
+      // USAR SISTEMA OFFLINE - Funciona online e offline
+      // ============================================================================
+      console.log('🔄 [AlmoxarifeView] Processando entrega (offline-aware)...');
+      
+      try {
+        await deliverOffline(
+          solicitacao.id,
+          user!.id,
+          quantidadeEntregue,
+          deliveryData.observacoes,
+          deliveryData.numeroLaudo,
+          deliveryData.validadeLaudo
+        );
+
+        console.log('✅ [AlmoxarifeView] Entrega processada com sucesso');
+        
+        // Mostrar mensagem apropriada
+        if (!isOnline) {
+          alert('✅ Entrega salva!\n\n📴 Você está offline. A entrega será sincronizada automaticamente quando a conexão retornar.');
+        } else {
+          alert('✅ Entrega realizada com sucesso!');
+        }
+
+      } catch (entregaErr) {
+        console.error('❌ [AlmoxarifeView] Erro ao processar entrega:', entregaErr);
+        alert(`Erro ao processar entrega: ${entregaErr instanceof Error ? entregaErr.message : 'Erro desconhecido'}`);
+        setIsDelivering(false);
+        return;
+      }
 
       // Limpar dados pendentes após sucesso
       setPendingReturnData(null);
@@ -813,6 +889,44 @@ export default function AlmoxarifeView({ onLogout }: AlmoxarifeViewProps) {
       {/* Main Content - Adjusted margin for fixed compact sidebar */}
       <main className="flex-1 ml-24 p-6 overflow-auto h-screen">
         <div className="max-w-7xl mx-auto space-y-6">
+          {/* Offline Status Indicator */}
+          {!isOnline && (
+            <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-lg shadow-sm">
+              <div className="flex items-center">
+                <div className="flex-shrink-0">
+                  <span className="text-2xl">📴</span>
+                </div>
+                <div className="ml-3 flex-1">
+                  <p className="text-sm font-medium text-yellow-800">
+                    Modo Offline
+                  </p>
+                  <p className="text-xs text-yellow-700 mt-1">
+                    {syncQueueCount > 0 
+                      ? `${syncQueueCount} operação(ões) aguardando sincronização`
+                      : 'Você pode continuar trabalhando. As operações serão sincronizadas quando a conexão retornar.'
+                    }
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Syncing Indicator */}
+          {isOnline && isSyncing && (
+            <div className="bg-blue-50 border-l-4 border-blue-400 p-4 rounded-lg shadow-sm">
+              <div className="flex items-center">
+                <div className="flex-shrink-0">
+                  <span className="text-2xl animate-spin">🔄</span>
+                </div>
+                <div className="ml-3">
+                  <p className="text-sm font-medium text-blue-800">
+                    Sincronizando operações offline...
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {activeTab === 'solicitacoes' ? (
             <SolicitacoesView
               onEntregar={iniciarEntrega}
@@ -902,8 +1016,6 @@ export default function AlmoxarifeView({ onLogout }: AlmoxarifeViewProps) {
                     </>
                   ) : (
                     <>
-                      Usuário ainda não possui biometria.
-                      <br />
                       <div className="mt-4">
                         <label className="block text-sm font-medium text-gray-700 mb-1">
                           Selecione o Dedo
@@ -936,9 +1048,20 @@ export default function AlmoxarifeView({ onLogout }: AlmoxarifeViewProps) {
 
               <div className="grid grid-cols-2 gap-3 w-full pt-4">
                 {biometricModal.processing ? (
-                  <div className="col-span-2 flex flex-col items-center justify-center p-4 bg-blue-50 rounded-xl space-y-2">
+                  <div className="col-span-2 flex flex-col items-center justify-center p-4 bg-blue-50 rounded-xl space-y-3">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
                     <p className="text-blue-700 font-bold text-lg animate-pulse">{biometricModal.message || "Aguardando..."}</p>
+                    {biometricModal.fingerprintImage && (
+                      <div className="mt-4 p-3 bg-white rounded-lg border-2 border-blue-200 shadow-sm">
+                        <img 
+                          src={`data:image/png;base64,${biometricModal.fingerprintImage}`}
+                          alt="Digital capturada"
+                          className="w-48 h-48 object-contain mx-auto"
+                          style={{ imageRendering: 'pixelated' }}
+                        />
+                        <p className="text-xs text-gray-500 text-center mt-2">Imagem da digital capturada</p>
+                      </div>
+                    )}
                   </div>
                 ) : biometricModal.validationResult === 'success' ? (
                   <div className="col-span-2 flex flex-col items-center justify-center p-6 bg-green-50 rounded-xl border border-green-200 animate-in zoom-in-95">
@@ -1000,6 +1123,21 @@ export default function AlmoxarifeView({ onLogout }: AlmoxarifeViewProps) {
           </div>
         </div>
       )}
+      {/* Delivery Validation Modal */}
+      {deliveryValidationModal.open && deliveryValidationModal.solicitacao && (
+        <DeliveryValidationModal
+          isOpen={deliveryValidationModal.open}
+          onClose={() => setDeliveryValidationModal(prev => ({ ...prev, open: false }))}
+          onConfirm={(deliveryData) => {
+            if (deliveryValidationModal.solicitacao) {
+              setDeliveryValidationModal(prev => ({ ...prev, open: false }));
+              proceedToBiometricValidation(deliveryValidationModal.solicitacao, deliveryData);
+            }
+          }}
+          solicitacao={deliveryValidationModal.solicitacao}
+        />
+      )}
+
       {/* Troca Modal */}
       {trocaModal.open && trocaModal.solicitacao && (
         <TrocaModal
@@ -1024,6 +1162,13 @@ export default function AlmoxarifeView({ onLogout }: AlmoxarifeViewProps) {
       )}
       {/* Update Checker */}
       <UpdateChecker />
+
+      {/* Cache Indicator */}
+      {user && (
+        <CacheIndicator 
+          userId={user.id}
+        />
+      )}
     </div>
   );
 }

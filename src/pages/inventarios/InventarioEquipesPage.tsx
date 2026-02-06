@@ -3,6 +3,7 @@ import { inventarioService } from '../../services/inventarioService';
 import { teamService } from '../../services/teamService';
 import { baseService } from '../../services/baseService';
 import { contratoService } from '../../services/contratoService';
+import { useUnifiedPermissions } from '../../hooks/useUnifiedPermissions';
 import { ChevronLeft, Search, X, Loader2, Users, Briefcase, Building, FileText } from 'lucide-react';
 
 interface Equipe {
@@ -21,6 +22,7 @@ interface InventarioEquipesPageProps {
 }
 
 export default function InventarioEquipesPage({ onBack, onSelectEquipe }: InventarioEquipesPageProps) {
+    const { userBases } = useUnifiedPermissions();
     const [equipes, setEquipes] = useState<Equipe[]>([]);
     const [inventarios, setInventarios] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -39,6 +41,11 @@ export default function InventarioEquipesPage({ onBack, onSelectEquipe }: Invent
 
             // Load bases
             const basesData = await baseService.getBasesAtivas();
+            
+            // Filtrar bases por acesso do usuário via usuario_bases
+            const basesComAcesso = basesData.filter(base => 
+                userBases.some(ub => ub.base_id === base.id && ub.ativo)
+            );
 
             // Load contratos
             const contratosData = await contratoService.getContratosAtivos();
@@ -47,16 +54,22 @@ export default function InventarioEquipesPage({ onBack, onSelectEquipe }: Invent
             // Load equipes
             const equipesData = await teamService.getEquipesAtivas();
 
-            // Map equipes with related data
-            const equipesComRelacoes = equipesData.map((equipe: any) => ({
-                id: equipe.id,
-                nome: equipe.nome,
-                operacao: equipe.operacao,
-                contrato_id: equipe.contrato_id || undefined,
-                contrato: contratosData.find((c: any) => c.id === equipe.contrato_id),
-                base_id: equipe.base_id || undefined,
-                base: basesData.find((b: any) => b.id === equipe.base_id)
-            }));
+            // Map equipes with related data e filtrar por bases com acesso
+            const equipesComRelacoes = equipesData
+                .map((equipe: any) => ({
+                    id: equipe.id,
+                    nome: equipe.nome,
+                    operacao: equipe.operacao,
+                    contrato_id: equipe.contrato_id || undefined,
+                    contrato: contratosData.find((c: any) => c.id === equipe.contrato_id),
+                    base_id: equipe.base_id || undefined,
+                    base: basesComAcesso.find((b: any) => b.id === equipe.base_id)
+                }))
+                .filter((equipe: any) => {
+                    // Apenas equipes com base_id nas bases com acesso
+                    if (!equipe.base_id) return false;
+                    return basesComAcesso.some(b => b.id === equipe.base_id);
+                });
 
             setEquipes(equipesComRelacoes);
 

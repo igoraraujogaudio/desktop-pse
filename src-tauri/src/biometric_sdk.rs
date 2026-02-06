@@ -283,9 +283,9 @@ pub fn test_biometric_connection() -> Result<String, String> {
             std::thread::sleep(std::time::Duration::from_millis(1000));
             
             // Tentar uma captura de teste (sem salvar)
-            log::info!("🔬 Testando captura (posicione o dedo no leitor)...");
+            log::info!("🔬 Testando captura (coloque o dedo no leitor)...");
             match capture_with_sdk() {
-                Ok((_, quality)) => {
+                Ok((_, quality, _)) => {
                     log_biometric(&format!("capture_with_sdk() OK. quality={}", quality));
                     let result = json!({
                         "success": true,
@@ -503,9 +503,9 @@ pub fn terminate_sdk() {
 }
 
 #[cfg(feature = "biometric")]
-/// Captura uma digital e retorna (template_base64, qualidade).
+/// Captura uma digital e retorna (template_base64, qualidade, image_base64).
 /// Se falhar com erro -1 (SDK não inicializado), tenta reinicializar automaticamente.
-pub fn capture_with_sdk() -> Result<(String, i32), String> {
+pub fn capture_with_sdk() -> Result<(String, i32, String), String> {
     unsafe {
         log_biometric("capture_with_sdk() called");
         let mut tmpl_ptr: *mut c_char = std::ptr::null_mut();
@@ -567,10 +567,22 @@ pub fn capture_with_sdk() -> Result<(String, i32), String> {
         let c_str = CStr::from_ptr(tmpl_ptr);
         let template = c_str.to_string_lossy().into_owned();
 
-        // Libera string alocada pelo SDK (CIDBIO_FreeString)
-        let _ = CIDBIO_FreeString(tmpl_ptr);
+        // Converter imagem para base64
+        let image_base64 = if !img_ptr.is_null() && w > 0 && h > 0 {
+            let img_size = (w * h) as usize;
+            let img_slice = std::slice::from_raw_parts(img_ptr, img_size);
+            base64::Engine::encode(&base64::engine::general_purpose::STANDARD, img_slice)
+        } else {
+            String::new()
+        };
 
-        Ok((template, quality as i32))
+        // Libera memória alocada pelo SDK
+        let _ = CIDBIO_FreeString(tmpl_ptr);
+        if !img_ptr.is_null() {
+            let _ = CIDBIO_FreeByteArray(img_ptr);
+        }
+
+        Ok((template, quality as i32, image_base64))
     }
 }
 

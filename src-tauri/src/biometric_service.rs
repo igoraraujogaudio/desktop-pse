@@ -37,6 +37,7 @@ pub struct BiometricValidationResult {
     pub percent: Option<i32>,
     pub quality: Option<i32>,
     pub enrolled: bool,
+    pub fingerprint_image: Option<String>,
 }
 
 /// Comando Tauri: valida a biometria do usuário ou cadastra se não existir.
@@ -164,18 +165,11 @@ fn validate_or_enroll_fingerprint_blocking(
             log_biometric(&format!("=== INÍCIO CAPTURA {}/3 ===", i));
             
             // Avisar frontend para pedir o dedo
-            log_biometric(&format!("Emitindo: Posicione o dedo ({}/3)", i));
-            let _ = app.emit("biometric-instruction", format!("📍 Posicione o dedo no leitor ({}/3)", i));
-            
-            // Delay maior para garantir que o usuário viu a mensagem e posicionou o dedo
-            std::thread::sleep(std::time::Duration::from_millis(3000)); 
-
-            // Avisar que está aguardando a captura
-            log_biometric(&format!("Emitindo: Aguardando leitura {}/3", i));
-            let _ = app.emit("biometric-instruction", format!("⏳ Aguardando leitura {}/3...", i));
+            log_biometric(&format!("Emitindo: Coloque o Dedo ({}/3)", i));
+            let _ = app.emit("biometric-instruction", format!("👆 Coloque o Dedo ({}/3)", i));
 
             log_biometric(&format!("Chamando capture_with_sdk() para captura {}/3", i));
-            let (tmpl, quality) = match biometric_sdk::capture_with_sdk() {
+            let (tmpl, quality, img_base64) = match biometric_sdk::capture_with_sdk() {
                 Ok(res) => {
                     log_biometric(&format!("capture_with_sdk() retornou OK para captura {}/3", i));
                     res
@@ -192,26 +186,29 @@ fn validate_or_enroll_fingerprint_blocking(
 
             if quality > best_quality {
                 best_quality = quality;
-                best_template = tmpl;
+                best_template = tmpl.clone();
+            }
+            
+            // Emitir imagem para o frontend
+            if !img_base64.is_empty() {
+                let _ = app.emit("biometric-image", img_base64);
             }
 
-            // Avisar sucesso e aguardar para usuário ver a mensagem
+            // Avisar sucesso
             log_biometric(&format!("Emitindo: Leitura {} concluída", i));
             let _ = app.emit("biometric-instruction", format!("✅ Leitura {} concluída! Qualidade: {}%", i, quality));
-            std::thread::sleep(std::time::Duration::from_millis(2000));
             
             // Pedir para retirar o dedo (se não for a última)
             if i < 3 {
                  log_biometric("Emitindo: Retire o dedo");
                  let _ = app.emit("biometric-instruction", "👆 Retire o dedo do leitor...");
-                 std::thread::sleep(std::time::Duration::from_millis(3000));
             }
             
             log_biometric(&format!("=== FIM CAPTURA {}/3 ===", i));
         }
 
-        // Validar qualidade mínima (90% exigido)
-        if best_quality < 90 {
+        // Validar qualidade mínima (60% exigido)
+        if best_quality < 60 {
             log_biometric(&format!("Qualidade insuficiente: {}", best_quality));
             return Ok(BiometricValidationResult {
                 success: false,
@@ -220,6 +217,7 @@ fn validate_or_enroll_fingerprint_blocking(
                 percent: None,
                 quality: Some(best_quality),
                 enrolled: false,
+                fingerprint_image: None,
             });
         }
 
@@ -262,12 +260,13 @@ fn validate_or_enroll_fingerprint_blocking(
             percent: None,
             quality: Some(best_quality),
             enrolled: true,
+            fingerprint_image: None,
         });
     }
 
     // 4) se já tem templates -> capturar e comparar
     log_biometric("Template encontrado. Iniciando captura para validação.");
-    let (live_template, live_quality) = biometric_sdk::capture_with_sdk().map_err(|e| {
+    let (live_template, live_quality, live_image) = biometric_sdk::capture_with_sdk().map_err(|e| {
         log_biometric(&format!("Erro na captura para validação: {}", e));
         e
     })?;
@@ -301,6 +300,7 @@ fn validate_or_enroll_fingerprint_blocking(
             percent: Some(best_percent),
             quality: Some(live_quality),
             enrolled: false,
+            fingerprint_image: Some(live_image.clone()),
         });
     }
 
@@ -312,6 +312,7 @@ fn validate_or_enroll_fingerprint_blocking(
         percent: Some(best_percent),
         quality: Some(live_quality),
         enrolled: false,
+        fingerprint_image: Some(live_image),
     })
 }
 

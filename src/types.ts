@@ -54,6 +54,7 @@ export interface SolicitacaoItem {
     nome: string;
     codigo: string;
     estoque_atual: number;
+    requer_laudo?: boolean;
   };
   solicitante?: {
     id: string;

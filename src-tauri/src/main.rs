@@ -95,7 +95,7 @@ fn install_driver_with_pnputil(inf_path: &std::path::Path) -> Result<(), String>
     );
     
     std::process::Command::new("powershell")
-        .args(&["-WindowStyle", "Hidden", "-Command", &ps_command])
+        .args(&["-ExecutionPolicy", "Bypass", "-WindowStyle", "Hidden", "-Command", &ps_command])
         .spawn()
         .map_err(|e| format!("Erro ao executar instalador do driver: {}", e))?;
 

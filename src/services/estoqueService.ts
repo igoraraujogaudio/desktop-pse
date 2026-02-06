@@ -279,16 +279,25 @@ export const estoqueService = {
     },
 
 
-    async entregarItem(solicitacaoId: string, _funcionarioId: string, quantidade: number, _condicao: string, observacoes: string, _laudoNumero?: string, _laudoValidade?: string, _dataVencimento?: string, _baseId?: string): Promise<void> {
-        // Simplificado para usar a query direta como no AlmoxarifeView
+    async entregarItem(solicitacaoId: string, _funcionarioId: string, quantidade: number, _condicao: string, observacoes: string, laudoNumero?: string, laudoValidade?: string, _dataVencimento?: string, _baseId?: string): Promise<void> {
+        const updates: any = {
+            status: 'entregue',
+            quantidade_entregue: quantidade,
+            entregue_em: new Date().toISOString(),
+            observacoes: observacoes
+        };
+
+        if (laudoNumero) {
+            updates.numero_laudo = laudoNumero;
+        }
+
+        if (laudoValidade) {
+            updates.validade_laudo = laudoValidade;
+        }
+
         const { error } = await supabase
             .from('solicitacoes_itens')
-            .update({
-                status: 'entregue',
-                quantidade_entregue: quantidade,
-                entregue_em: new Date().toISOString(),
-                observacoes: observacoes // Append or replace?
-            })
+            .update(updates)
             .eq('id', solicitacaoId);
 
         if (error) throw error;

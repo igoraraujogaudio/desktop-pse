@@ -71,7 +71,7 @@ export default function BiometricTest() {
             setMessage("Iniciando processo...");
             setResult(null);
 
-            // Ouvir instruções do backend (ex: "Posicione o dedo 1/3", "Retire o dedo")
+            // Ouvir instruções do backend (ex: "Coloque o Dedo 1/3", "Retire o dedo")
             const { listen } = await import('@tauri-apps/api/event');
             unlisten = await listen<string>('biometric-instruction', (event) => {
                 setMessage(event.payload);

@@ -34,6 +34,7 @@ git push origin $tag
 Write-Host "`nProcesso concluido!" -ForegroundColor Green
 Write-Host "`nProximos passos:" -ForegroundColor Cyan
 Write-Host "   1. Acesse: https://github.com/igoraraujogaudio/desktop-pse/releases" -ForegroundColor White
+
 Write-Host "   2. Clique em Draft a new release" -ForegroundColor White
 Write-Host "   3. Selecione a tag: $tag" -ForegroundColor White
 Write-Host "   4. Faca upload dos arquivos de build" -ForegroundColor White

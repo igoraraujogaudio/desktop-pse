@@ -61,6 +61,16 @@ export function useAuth(): AuthContextType {
 
             if (error) {
                 console.error('❌ [useAuth] Error querying usuarios table:', error);
+                
+                // Check if it's a network error
+                if (error.message?.includes('Failed to fetch') || error.message?.includes('network')) {
+                    console.error('🌐 [useAuth] Network error detected - logging out');
+                    await supabase.auth.signOut();
+                    setUser(null);
+                    setSession(null);
+                    setLoading(false);
+                    return;
+                }
             }
 
             if (!data) {
@@ -73,23 +83,26 @@ export function useAuth(): AuthContextType {
                     .maybeSingle();
 
                 console.log('📊 [useAuth] Email query result:', emailResult);
+                
+                // Check for network error in email query too
+                if (emailResult.error?.message?.includes('Failed to fetch') || emailResult.error?.message?.includes('network')) {
+                    console.error('🌐 [useAuth] Network error on email query - logging out');
+                    await supabase.auth.signOut();
+                    setUser(null);
+                    setSession(null);
+                    setLoading(false);
+                    return;
+                }
+                
                 data = emailResult.data;
             }
 
             if (!data) {
-                console.error('❌ [useAuth] User profile not found in usuarios table');
-                // Create a temporary User object from auth data
-                const tempUser: User = {
-                    id: authUser.id,
-                    email: authUser.email || '',
-                    nome: authUser.user_metadata?.full_name || authUser.email || 'Usuário',
-                    matricula: '',
-                    nivel_acesso: 'operacao',
-                    ativo: true,
-                    criado_em: new Date().toISOString(),
-                };
-                console.log('⚠️ [useAuth] Using temporary user:', tempUser);
-                setUser(tempUser);
+                console.error('❌ [useAuth] User profile not found in usuarios table - logging out');
+                // User not found in database - force logout
+                await supabase.auth.signOut();
+                setUser(null);
+                setSession(null);
             } else {
                 console.log('✅ [useAuth] User profile loaded successfully:', data.nome, data.email, data.id);
                 setUser(data as User);

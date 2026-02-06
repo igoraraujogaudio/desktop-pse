@@ -3,6 +3,7 @@ import { estoqueService } from '../services/estoqueService';
 import { baseService } from '../services/baseService';
 import { FileText, Plus, Trash2, ArrowLeft, Loader2, Package } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
+import { useUnifiedPermissions } from '../hooks/useUnifiedPermissions';
 
 interface ItemNF {
     item_id?: string;
@@ -37,6 +38,7 @@ interface EntradaMaterialPageProps {
 
 export default function EntradaMaterialPage({ onBack }: EntradaMaterialPageProps) {
     const { user } = useAuth();
+    const { userBases } = useUnifiedPermissions();
     const [tipoEntrada, setTipoEntrada] = useState<'nota_fiscal' | 'transferencia'>('nota_fiscal');
     const [loading, setLoading] = useState(false);
     const [bases, setBases] = useState<Base[]>([]);
@@ -80,10 +82,16 @@ export default function EntradaMaterialPage({ onBack }: EntradaMaterialPageProps
     const loadBases = async () => {
         try {
             const basesData = await baseService.getBasesAtivas();
-            setBases(basesData);
-            if (basesData.length > 0) {
-                setBaseSelecionada(basesData[0].id);
-                setContratoId(basesData[0].contrato_id || '');
+            
+            // Filtrar bases por acesso do usuário via usuario_bases
+            const basesComAcesso = basesData.filter(base => 
+                userBases.some(ub => ub.base_id === base.id && ub.ativo)
+            );
+            
+            setBases(basesComAcesso);
+            if (basesComAcesso.length > 0) {
+                setBaseSelecionada(basesComAcesso[0].id);
+                setContratoId(basesComAcesso[0].contrato_id || '');
             }
         } catch (error) {
             console.error('Erro ao carregar bases:', error);

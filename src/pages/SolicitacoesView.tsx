@@ -25,7 +25,7 @@ interface SolicitacoesViewProps {
 type StatusType = 'todas' | 'pendente' | 'aprovada' | 'aguardando_estoque' | 'entregue' | 'rejeitada' | 'devolvida';
 
 export default function SolicitacoesView({ onEntregar, selectedSolicitacao, isDelivering, onValidar, lastUpdate }: SolicitacoesViewProps) {
-    const { user, hasBaseAccess } = useUnifiedPermissions();
+    const { user, hasBaseAccess, userBases } = useUnifiedPermissions();
     const { hasPermission } = useModularPermissions();
 
     // NAVIGATION STATE
@@ -74,7 +74,7 @@ export default function SolicitacoesView({ onEntregar, selectedSolicitacao, isDe
         const end = new Date(today.getTime() + 24 * 60 * 60 * 1000 - 1);
         setStartDate(start);
         setEndDate(end);
-    }, [user]);
+    }, [user, userBases]);
 
     useEffect(() => {
         loadSolicitacoes();
@@ -93,9 +93,19 @@ export default function SolicitacoesView({ onEntregar, selectedSolicitacao, isDe
     const loadFilters = async () => {
         console.log('🔄 [SolicitacoesView] Loading filters for user:', user?.id);
         try {
-            const bases = await baseService.getBasesAtivas();
-            setAvailableBases(bases);
-            console.log('✅ [SolicitacoesView] Loaded bases:', bases.length);
+            // Todos os usuários veem apenas as bases que têm acesso via usuario_bases
+            const todasBases = await baseService.getBasesAtivas();
+            const basesComAcesso = todasBases.filter(base => 
+                userBases.some(ub => ub.base_id === base.id && ub.ativo)
+            );
+            setAvailableBases(basesComAcesso);
+            console.log('✅ [SolicitacoesView] Loaded accessible bases:', basesComAcesso.length, 'of', todasBases.length);
+            
+            // Se o usuário tem acesso a apenas uma base, seleciona automaticamente
+            if (basesComAcesso.length === 1 && baseFilter === 'todas') {
+                setBaseFilter(basesComAcesso[0].id);
+                console.log('🎯 [SolicitacoesView] Auto-selected single base:', basesComAcesso[0].nome);
+            }
         } catch (error) {
             console.error('❌ [SolicitacoesView] Error loading filters:', error);
         }
@@ -107,8 +117,6 @@ export default function SolicitacoesView({ onEntregar, selectedSolicitacao, isDe
         console.log('🔢 [SolicitacoesView] Loading status counts');
 
         try {
-            const isAdmin = user.nivel_acesso === 'admin';
-
             // Build base query with filters
             let baseQuery = supabase
                 .from('solicitacoes_itens')
@@ -134,10 +142,8 @@ export default function SolicitacoesView({ onEntregar, selectedSolicitacao, isDe
                 return;
             }
 
-            // Filter by user base access if not admin
-            const accessibleRecords = isAdmin
-                ? allRecords || []
-                : (allRecords || []).filter(r => r.base_id && hasBaseAccess(r.base_id));
+            // Filter by user base access via usuario_bases
+            const accessibleRecords = (allRecords || []).filter(r => r.base_id && hasBaseAccess(r.base_id));
 
             // Count by status
             const counts: Record<StatusType, number> = {
@@ -167,9 +173,6 @@ export default function SolicitacoesView({ onEntregar, selectedSolicitacao, isDe
         setLoading(true);
 
         try {
-            const isAdmin = user.nivel_acesso === 'admin';
-            console.log('👤 [SolicitacoesView] User is admin:', isAdmin);
-
             let data: SolicitacaoItem[];
 
             if (activeStatus === 'todas') {
@@ -232,14 +235,14 @@ export default function SolicitacoesView({ onEntregar, selectedSolicitacao, isDe
                 console.warn('⚠️ [SolicitacoesView] Found duplicate solicitations:', data.length - uniqueData.length);
             }
 
+            // Filter by base access via usuario_bases
             let filtered = uniqueData.filter(s => {
-                // Only filter by base access for non-admin users
                 if (!s.base_id) {
                     console.warn('⚠️ [SolicitacoesView] Solicitation without base_id:', s.id);
-                    return isAdmin;
+                    return false;
                 }
 
-                if (!isAdmin && !hasBaseAccess(s.base_id)) {
+                if (!hasBaseAccess(s.base_id)) {
                     console.log('🚫 [SolicitacoesView] User has no access to base:', s.base_id, s.base?.nome);
                     return false;
                 }
@@ -295,11 +298,29 @@ export default function SolicitacoesView({ onEntregar, selectedSolicitacao, isDe
             alert('Usuário não identificado.');
             return;
         }
-        if (!confirm(`Aprovar solicitação de ${item.item?.nome}?`)) return;
+        
+        // Pedir quantidade aprovada
+        const quantidadeInput = prompt(
+            `Aprovar solicitação de ${item.item?.nome}?\n\nQuantidade solicitada: ${item.quantidade_solicitada}\n\nDigite a quantidade a aprovar:`,
+            item.quantidade_solicitada.toString()
+        );
+        
+        if (quantidadeInput === null) return; // Cancelado
+        
+        const quantidadeAprovada = parseInt(quantidadeInput);
+        if (isNaN(quantidadeAprovada) || quantidadeAprovada <= 0) {
+            alert('Quantidade inválida. Digite um número maior que zero.');
+            return;
+        }
+        
+        if (quantidadeAprovada > item.quantidade_solicitada) {
+            alert('Quantidade aprovada não pode ser maior que a solicitada.');
+            return;
+        }
 
         try {
             setLoading(true);
-            await estoqueService.updateStatus(item.id, 'aprovada', user.id);
+            await estoqueService.aprovarSolicitacao(item.id, user.id, quantidadeAprovada);
             console.log('✅ [SolicitacoesView] Approved successfully');
             loadSolicitacoes(); // Reload to show updated status
             // Stay on details page

@@ -4,6 +4,7 @@ import { estoqueService } from '../services/estoqueService';
 import { catalogoService } from '../services/catalogoService';
 import { userService } from '../services/userService';
 import { baseService } from '../services/baseService';
+import { useUnifiedPermissions } from '../hooks/useUnifiedPermissions';
 import type { User } from '../types';
 import type { Base } from '../types/contratos';
 
@@ -33,6 +34,7 @@ interface ItemEstoque {
 }
 
 export default function EmergencyModal({ isOpen, onClose, onSuccess, userId }: EmergencyModalProps) {
+    const { userBases } = useUnifiedPermissions();
     const [loading, setLoading] = useState(false);
     const [bases, setBases] = useState<Base[]>([]);
     const [usuarios, setUsuarios] = useState<User[]>([]);
@@ -74,7 +76,12 @@ export default function EmergencyModal({ isOpen, onClose, onSuccess, userId }: E
                 userService.getUsuariosAtivos()
             ]);
 
-            setBases(basesData);
+            // Filtrar bases por acesso do usuário via usuario_bases
+            const basesComAcesso = basesData.filter(base => 
+                userBases.some(ub => ub.base_id === base.id && ub.ativo)
+            );
+
+            setBases(basesComAcesso);
             setUsuarios(usuariosData);
         } catch (error) {
             console.error('Error loading data:', error);
