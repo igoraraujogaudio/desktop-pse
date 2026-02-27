@@ -313,17 +313,20 @@ fn main() {
 
             Ok(())
         })
-        .on_window_event(|_window, event| {
+        .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { .. } = event {
-                // Executar cleanup ao fechar
-                let _ = cleanup::cleanup_app_data();
+                if window.label() == "main" {
+                    let _ = cleanup::cleanup_app_data();
+                    biometric_sdk::terminate_sdk();
+                    window.app_handle().exit(0);
+                }
             }
         })
         .build(tauri::generate_context!())
         .expect("error while running tauri application")
         .run(|_app_handle, event| {
-            if let tauri::RunEvent::ExitRequested { api, .. } = event {
-                api.prevent_exit();
+            if let tauri::RunEvent::Exit = event {
+                biometric_sdk::terminate_sdk();
             }
         });
 }

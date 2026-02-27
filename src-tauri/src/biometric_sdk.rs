@@ -397,9 +397,10 @@ pub fn list_com_ports() -> Result<String, String> {
 pub fn init_sdk(_port: Option<&str>) -> Result<(), String> {
     unsafe {
         log_biometric("init_sdk() called");
-        // IMPORTANTE: O exemplo oficial do SDK funciona SEM chamar SetSerialCommPort
-        // O SDK detecta automaticamente o leitor biométrico
-        // Apenas chamamos CIDBIO_Init() diretamente
+        // Sempre terminar antes de inicializar para liberar qualquer handle COM anterior
+        // (evita CreateFile error: 5 / Access Denied em reloads do tauri dev)
+        let _ = CIDBIO_Terminate();
+        std::thread::sleep(std::time::Duration::from_millis(300));
         
         log::info!("🔧 Inicializando SDK biométrico (detecção automática)...");
         log::debug!("Chamando CIDBIO_Init() - SDK detectará o leitor automaticamente");

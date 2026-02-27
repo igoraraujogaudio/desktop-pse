@@ -1051,17 +1051,6 @@ export default function AlmoxarifeView({ onLogout }: AlmoxarifeViewProps) {
                   <div className="col-span-2 flex flex-col items-center justify-center p-4 bg-blue-50 rounded-xl space-y-3">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
                     <p className="text-blue-700 font-bold text-lg animate-pulse">{biometricModal.message || "Aguardando..."}</p>
-                    {biometricModal.fingerprintImage && (
-                      <div className="mt-4 p-3 bg-white rounded-lg border-2 border-blue-200 shadow-sm">
-                        <img 
-                          src={`data:image/png;base64,${biometricModal.fingerprintImage}`}
-                          alt="Digital capturada"
-                          className="w-48 h-48 object-contain mx-auto"
-                          style={{ imageRendering: 'pixelated' }}
-                        />
-                        <p className="text-xs text-gray-500 text-center mt-2">Imagem da digital capturada</p>
-                      </div>
-                    )}
                   </div>
                 ) : biometricModal.validationResult === 'success' ? (
                   <div className="col-span-2 flex flex-col items-center justify-center p-6 bg-green-50 rounded-xl border border-green-200 animate-in zoom-in-95">

@@ -82,15 +82,22 @@ fn validate_or_enroll_fingerprint_blocking(
     // Se falhar, tentar reinicializar (útil quando o sensor é reconectado)
     let port = std::env::var("IDBIO_PORT").ok();
     if let Err(e) = biometric_sdk::init_sdk(port.as_deref()) {
-        log_biometric(&format!("init_sdk() error: {}", e));
+        log_biometric(&format!("init_sdk() error: {}. Tentando reinicializar...", e));
         log::warn!("Falha na inicialização do SDK: {}. Tentando reinicializar...", e);
         
-        // Tentar terminar e reinicializar
+        // Terminar e aguardar o driver liberar o device
         biometric_sdk::terminate_sdk();
-        std::thread::sleep(std::time::Duration::from_millis(500));
+        std::thread::sleep(std::time::Duration::from_millis(1500));
         
         // Segunda tentativa
-        biometric_sdk::init_sdk(port.as_deref())?;
+        if let Err(e2) = biometric_sdk::init_sdk(port.as_deref()) {
+            log_biometric(&format!("Segunda tentativa falhou: {}. Aguardando mais e tentando novamente...", e2));
+            biometric_sdk::terminate_sdk();
+            std::thread::sleep(std::time::Duration::from_millis(2000));
+            
+            // Terceira e última tentativa
+            biometric_sdk::init_sdk(port.as_deref())?;
+        }
     }
 
     log_biometric("SDK inicializado com sucesso");
@@ -166,7 +173,11 @@ fn validate_or_enroll_fingerprint_blocking(
             
             // Avisar frontend para pedir o dedo
             log_biometric(&format!("Emitindo: Coloque o Dedo ({}/3)", i));
-            let _ = app.emit("biometric-instruction", format!("👆 Coloque o Dedo ({}/3)", i));
+            if i == 1 {
+                let _ = app.emit("biometric-instruction", "Coloque o dedo no leitor");
+            } else {
+                let _ = app.emit("biometric-instruction", format!("Coloque o dedo novamente ({}/3)", i));
+            }
 
             log_biometric(&format!("Chamando capture_with_sdk() para captura {}/3", i));
             let (tmpl, quality, img_base64) = match biometric_sdk::capture_with_sdk() {
@@ -194,15 +205,7 @@ fn validate_or_enroll_fingerprint_blocking(
                 let _ = app.emit("biometric-image", img_base64);
             }
 
-            // Avisar sucesso
-            log_biometric(&format!("Emitindo: Leitura {} concluída", i));
-            let _ = app.emit("biometric-instruction", format!("✅ Leitura {} concluída! Qualidade: {}%", i, quality));
-            
-            // Pedir para retirar o dedo (se não for a última)
-            if i < 3 {
-                 log_biometric("Emitindo: Retire o dedo");
-                 let _ = app.emit("biometric-instruction", "👆 Retire o dedo do leitor...");
-            }
+            log_biometric(&format!("Leitura {}/3 concluída", i));
             
             log_biometric(&format!("=== FIM CAPTURA {}/3 ===", i));
         }
