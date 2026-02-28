@@ -6,9 +6,9 @@
   "plugins": {
     "updater": {
       "endpoints": [
-        "https://raw.githubusercontent.com/igoraraujogaudio/desktop-pse/master/latest.json?t=20260206114300"
+        "https://raw.githubusercontent.com/igoraraujogaudio/desktop-pse/master/latest.json?t=20260227194200"
       ],
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEI5N0I4OUI1OTYyRTREOUEKUldTYVRTNld0WWw3dWFCcEtEL2VZOFFqMmtlcitSUW1ZL3VDcW1oNUNCa0pSNXd5OHRQM3hISXQK",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEE2QzQ2NDQxNDU1Q0E5MzUKUldRMXFWeEZRV1RFcGxVWlFwTTdCSEdpNzdEQW5NcitrVjZnRTVLQm13RW9NWk9VL1hUL25PWk8K",
       "windows": {
         "installMode": "passive"
       }
