@@ -456,7 +456,7 @@ export default function AlmoxarifeView({ onLogout }: AlmoxarifeViewProps) {
         enrolled: boolean;
       }>("validate_or_enroll_fingerprint", {
         userId: userId,
-        minPercent: 90,
+        minPercent: 50,
         fingerId: biometricModal.isEnrolled ? undefined : biometricModal.selectedFinger,
         supabaseUrl: import.meta.env.VITE_SUPABASE_URL,
         serviceKey: import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY,
